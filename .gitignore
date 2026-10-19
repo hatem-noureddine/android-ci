@@ -1,2 +1,19 @@
-# Ignore settings for JetBrains IDEs (e.g., IntelliJ, PyCharm, WebStorm)
+# IDEs and Editors
 .idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts and temp
+build/
+.gradle/
+*.apk
+*.aab
+*.apks
+
+# Docker local builds
+*.log
