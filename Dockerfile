@@ -1,13 +1,14 @@
 # ==============================================================================
 # Docker Android CI Build Box
-# Optimized, Multi-arch (amd64 / arm64), Fast & Lightweight CI/CD Image
-# Includes: Android SDK (API 34 & 35), OpenJDK 17 & 21 (default 21), Fastlane,
-#           Bundletool, GitHub CLI (gh), git, curl, zip
+# Optimized, Multi-arch (amd64 / arm64), Corporate & GitLab Runner Ready
+# Includes: Android SDK (API 34, 35, 36 & dynamic 37), Build-tools 34, 35, 36,
+#           OpenJDK 17 & 21, Fastlane, Ruby, Python3, Bundletool, GitHub CLI (gh),
+#           Auto-detection for Corporate CA, HTTP Proxy, and Nexus/Artifactory
 # ==============================================================================
 
 FROM ubuntu:24.04
 
-# Arguments for versions
+# Build Arguments
 ARG ANDROID_SDK_TOOLS_VERSION="13114758"
 ARG BUNDLETOOL_VERSION="1.18.1"
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -16,12 +17,13 @@ ARG DEBIAN_FRONTEND="noninteractive"
 ENV ANDROID_HOME="/opt/android-sdk" \
     ANDROID_SDK_ROOT="/opt/android-sdk" \
     BUNDLETOOL_PATH="/opt/bundletool/bundletool.jar" \
+    GRADLE_USER_HOME="/root/.gradle" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US.UTF-8" \
     LC_ALL="en_US.UTF-8" \
     TZ="UTC"
 
-# Base system dependencies & OpenJDK (headless to minimize image size)
+# Base system dependencies, Python3, Ruby & OpenJDK (headless to minimize image size)
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
         apt-transport-https \
@@ -37,6 +39,10 @@ RUN apt-get update -qq && \
         openjdk-21-jdk-headless \
         openssh-client \
         pkg-config \
+        python3 \
+        python3-pip \
+        python3-venv \
+        python3-dev \
         ruby-full \
         ruby-dev \
         tzdata \
@@ -46,6 +52,9 @@ RUN apt-get update -qq && \
         zlib1g-dev && \
     locale-gen ${LANG} && \
     update-locale LANG=${LANG} LC_ALL=${LC_ALL} && \
+    # Configure pip for CI scripts without PEP 668 restriction
+    mkdir -p /etc && \
+    printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
     # Setup JDK symlinks for cross-platform convenience (amd64 & arm64)
     ARCH=$(dpkg --print-architecture) && \
     ln -s /usr/lib/jvm/java-21-openjdk-${ARCH} /opt/jdk-21 && \
@@ -58,7 +67,7 @@ RUN apt-get update -qq && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
     apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends gh && \
-    # Fastlane and Bundler (installed without docs to save space)
+    # Fastlane and Bundler (latest, installed without docs to save space)
     gem install bundler fastlane --no-document && \
     # Clean apt and gem caches
     apt-get clean && \
@@ -77,13 +86,17 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     rm -f /tmp/cmdline-tools.zip && \
     # Pre-accept all licenses
     yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 && \
-    # Install platform-tools, platforms and build-tools for API 34 & 35
+    # Install platform-tools, platforms and build-tools for API 34, 35, 36
     ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install \
         "platform-tools" \
         "platforms;android-34" \
         "platforms;android-35" \
+        "platforms;android-36" \
         "build-tools;34.0.0" \
-        "build-tools;35.0.0" > /dev/null && \
+        "build-tools;35.0.0" \
+        "build-tools;36.0.0" > /dev/null 2>&1 || true && \
+    # Gracefully attempt API 37 if available on Google channels
+    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-37" > /dev/null 2>&1 || true && \
     # Download Bundletool and create executable wrapper
     mkdir -p /opt/bundletool && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o ${BUNDLETOOL_PATH} && \
@@ -92,21 +105,29 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     # Create helper script to switch JDK easily between 17 and 21
     printf '#!/bin/bash\nset -e\nARCH=$(dpkg --print-architecture)\ncase "$1" in\n  17)\n    export JAVA_HOME="/opt/jdk-17"\n    ln -snf /opt/jdk-17 /opt/default-jdk\n    echo "Switched to JDK 17 ($JAVA_HOME)"\n    ;;\n  21)\n    export JAVA_HOME="/opt/jdk-21"\n    ln -snf /opt/jdk-21 /opt/default-jdk\n    echo "Switched to JDK 21 ($JAVA_HOME)"\n    ;;\n  *)\n    echo "Usage: switch-jdk [17|21]"\n    exit 1\n    ;;\nesac\n' > /usr/local/bin/switch-jdk && \
     chmod +x /usr/local/bin/switch-jdk && \
-    # Ensure wide permissions for non-root CI runners (Jenkins, GitLab CI, GitHub Actions)
-    mkdir -p /project && \
+    # Create helper script to dynamically install any SDK version on the fly
+    printf '#!/bin/bash\nset -e\nTARGET="$1"\nif [ -z "$TARGET" ]; then\n  echo "Usage: install-sdk-version <platform_number_or_package>"\n  exit 1\nfi\nyes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true\nif [[ "$TARGET" =~ ^[0-9]+$ ]]; then\n  echo "Installing Android platform $TARGET..."\n  yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${TARGET}" "build-tools;${TARGET}.0.0" >/dev/null 2>&1 || yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${TARGET}" >/dev/null 2>&1\nelse\n  yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$TARGET" >/dev/null 2>&1\nfi\necho "Finished installing $TARGET"\n' > /usr/local/bin/install-sdk-version && \
+    chmod +x /usr/local/bin/install-sdk-version && \
+    # GitLab Runner & local workspace compatibility
+    mkdir -p /builds /project /certificates && \
     chmod -R 777 ${ANDROID_HOME} && \
-    chmod 777 /project
+    chmod 777 /builds /project /certificates
+
+# Copy and configure entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Working directory
 WORKDIR /project
 
 # OCI Standard Image Metadata Labels
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Android SDK 34/35, OpenJDK 17/21, Fastlane & Bundletool" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Android SDK 34/35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & GitLab Runner auto-detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.source="https://github.com/hateum/android-ci-box" \
-      org.opencontainers.image.documentation="https://github.com/hateum/android-ci-box#readme"
+      org.opencontainers.image.source="https://github.com/hatem-noureddine/android-ci" \
+      org.opencontainers.image.documentation="https://github.com/hatem-noureddine/android-ci#readme"
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
