@@ -170,7 +170,39 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Workspaces Permissions Compatibility
+# 5. Enterprise Gradle Shared Remote Build Cache (HttpBuildCache)
+# Active if GRADLE_BUILD_CACHE_URL or GRADLE_REMOTE_CACHE_URL is defined
+# ------------------------------------------------------------------------------
+REMOTE_CACHE_URL="${GRADLE_BUILD_CACHE_URL:-${GRADLE_REMOTE_CACHE_URL:-}}"
+if [ -n "$REMOTE_CACHE_URL" ] && [ -d "$GRADLE_DIR/init.d" ]; then
+    CACHE_USER="${GRADLE_BUILD_CACHE_USER:-${NEXUS_USER:-}}"
+    CACHE_PASS="${GRADLE_BUILD_CACHE_PASSWORD:-${NEXUS_PASSWORD:-}}"
+    CACHE_PUSH="${GRADLE_BUILD_CACHE_PUSH:-true}"
+    CACHE_CREDS=""
+    if [ -n "$CACHE_USER" ] && [ -n "$CACHE_PASS" ]; then
+        CACHE_CREDS="credentials { username = '$CACHE_USER'; password = '$CACHE_PASS' }"
+    fi
+
+    cat <<EOF > "$GRADLE_DIR/init.d/remote-build-cache.init.gradle"
+import org.gradle.caching.http.HttpBuildCache
+
+settingsEvaluated { settings ->
+    settings.buildCache {
+        local {
+            enabled = true
+        }
+        remote(HttpBuildCache) {
+            url = uri('$REMOTE_CACHE_URL')
+            push = $CACHE_PUSH
+            $CACHE_CREDS
+        }
+    }
+}
+EOF
+fi
+
+# ------------------------------------------------------------------------------
+# 6. Workspaces Permissions Compatibility
 # ------------------------------------------------------------------------------
 mkdir -p /builds /project /certificates 2>/dev/null || true
 chmod 777 /builds /project /certificates 2>/dev/null || true

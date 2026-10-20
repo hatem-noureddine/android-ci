@@ -107,17 +107,16 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools && \
     mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest && \
     rm -f /tmp/cmdline-tools.zip && \
-    # Pre-accept all licenses
-    yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 && \
-    # Install platform-tools, platforms and build-tools for API 35, 36, 37
-    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install \
+    # Pre-accept all licenses and install SDK packages for API 35, 36, 37
+    yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses && \
+    yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
         "platform-tools" \
         "platforms;android-35" \
         "platforms;android-36" \
         "platforms;android-37" \
         "build-tools;35.0.0" \
         "build-tools;36.0.0" \
-        "build-tools;37.0.0" > /dev/null 2>&1 || true && \
+        "build-tools;37.0.0" && \
     # Download Bundletool (1.18.3) and create executable wrapper
     mkdir -p /opt/bundletool && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o ${BUNDLETOOL_PATH} && \

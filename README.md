@@ -102,6 +102,10 @@ Toutes les configurations d'entreprise s'activent **automatiquement** dès qu'un
 | `HTTP_PROXY` | Proxy HTTP de votre entreprise. | `http://proxy.corp:8080` |
 | `NO_PROXY` | Hôtes ou domaines exemptés de proxy. | `localhost,127.0.0.1,.corp,.local` |
 | `GRADLE_JVMARGS` | *(Optionnel)* Surcharge des options mémoire JVM de Gradle. | `-Xmx6g -XX:+UseG1GC` (Défaut: `-Xmx4g`) |
+| `GRADLE_BUILD_CACHE_URL` | *(Optionnel)* URL du cache de build distant partagé HTTP (Gradle Remote Build Cache). | `https://cache.entreprise.corp/cache/` |
+| `GRADLE_BUILD_CACHE_PUSH`| *(Optionnel)* Autorise l'envoi vers le cache distant (`true`/`false`). | `true` (Défaut: `true`) |
+| `GRADLE_BUILD_CACHE_USER`| *(Optionnel)* Utilisateur pour le cache de build distant. | `ci-cache-user` |
+| `GRADLE_BUILD_CACHE_PASSWORD`| *(Optionnel)* Mot de passe ou token pour le cache distant. | `$CACHE_TOKEN` |
 | `JAVA_HOME` | Chemin du JDK actif. | `/opt/default-jdk` (Défaut: JDK 21) |
 | `GRADLE_USER_HOME`| Dossier du cache Gradle. | `/home/runner/.gradle` |
 
@@ -329,6 +333,25 @@ docker run --rm \
   hateum/android-ci-box:latest \
   /project/tests/test-image.sh
 ```
+
+---
+
+## 🚢 Publication Automatisée sur Docker Hub & Multi-Tagging
+
+Le pipeline GitHub Actions ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) orchestre la sécurité et la publication multi-architecture :
+
+1. **Scan de Sécurité Automatisé Trivy** :
+   - Analyse systématique des CVEs sur chaque image construite (`aquasecurity/trivy-action`).
+   - Publication du rapport SARIF directement dans l'onglet **Security > Code scanning** de GitHub.
+   - Blocage strict si des vulnérabilités critiques non corrigées (`CRITICAL`) sont détectées.
+2. **Suite de Tests d'Intégration** :
+   - Exécution complète des 6 étapes de tests avant toute publication.
+3. **Multi-Tagging Automatique sur Docker Hub** :
+   - `latest` : Image de référence par défaut.
+   - `api37` : Tag d'alias pour la cible Android 17 / API 37.
+   - `gradle9` : Tag d'alias pour la stack Gradle 9.x.
+   - `v1.0.0`, `v1.0`, `v1` : Versions sémantiques basées sur vos tags Git (`v*.*.*`).
+   - `sha-xxxxxxx` : Hash court du commit Git pour une traçabilité immuable.
 
 ---
 

@@ -103,6 +103,17 @@ if [ -n "$MIRROR_VAL" ]; then
 else
     echo -e "  Nexus Mirror    : ${GREEN}Standard direct repositories (Google, MavenCentral, GradlePortal)${RESET}"
 fi
+
+# Check Remote Build Cache
+CACHE_VAL="${GRADLE_BUILD_CACHE_URL:-${GRADLE_REMOTE_CACHE_URL:-}}"
+if [ -n "$CACHE_VAL" ]; then
+    echo -e "  Build Cache HTTP: ${YELLOW}Active -> ${CACHE_VAL}${RESET}"
+    if [ -f /home/runner/.gradle/init.d/remote-build-cache.init.gradle ]; then
+        echo -e "  Build Cache Hook: ${GREEN}remote-build-cache.init.gradle configured${RESET}"
+    fi
+else
+    echo -e "  Build Cache HTTP: ${CYAN}Local cache only (No remote HTTP build cache)${RESET}"
+fi
 echo ""
 
 # 6. Connectivity Quick-Check
