@@ -1,0 +1,122 @@
+#!/bin/bash
+# ==============================================================================
+# Android CI Doctor - Diagnostics & Connectivity Verification Tool
+# ==============================================================================
+
+BOLD="\033[1m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+CYAN="\033[0;36m"
+RED="\033[0;31m"
+RESET="\033[0m"
+
+echo -e "${BOLD}${CYAN}=== Android CI Doctor (hateum/android-ci-box) ===${RESET}\n"
+
+# 1. System & Execution User
+echo -e "${BOLD}1. System & User Execution${RESET}"
+echo -e "  OS Architecture : $(uname -m) ($(dpkg --print-architecture))"
+echo -e "  Current User    : UID=$(id -u), GID=$(id -g), User=$(whoami 2>/dev/null || echo 'unknown')"
+if [ "$(id -u)" -eq 0 ]; then
+    echo -e "  Security Mode   : ${YELLOW}Root execution${RESET}"
+else
+    echo -e "  Security Mode   : ${GREEN}Non-Root / Hardened Runner execution (UID $(id -u))${RESET}"
+fi
+echo ""
+
+# 2. Java Runtime
+echo -e "${BOLD}2. Java Runtime${RESET}"
+echo -e "  JAVA_HOME       : ${JAVA_HOME:-Not set}"
+if command -v java >/dev/null 2>&1; then
+    JAVA_VER=$(java -version 2>&1 | head -n 1)
+    echo -e "  Active Version  : ${GREEN}${JAVA_VER}${RESET}"
+else
+    echo -e "  Active Version  : ${RED}Java not found in PATH!${RESET}"
+fi
+echo -e "  Available JDKs  : $(ls -d /opt/jdk-* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')"
+echo ""
+
+# 3. Android SDK Components
+echo -e "${BOLD}3. Android SDK Components${RESET}"
+echo -e "  ANDROID_HOME    : ${ANDROID_HOME:-Not set}"
+if [ -d "$ANDROID_HOME/platforms" ]; then
+    PLATFORMS=$(ls -d "$ANDROID_HOME/platforms"/* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')
+    echo -e "  Platforms       : ${GREEN}${PLATFORMS}${RESET}"
+else
+    echo -e "  Platforms       : ${RED}None installed${RESET}"
+fi
+if [ -d "$ANDROID_HOME/build-tools" ]; then
+    BUILD_TOOLS=$(ls -d "$ANDROID_HOME/build-tools"/* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')
+    echo -e "  Build Tools     : ${GREEN}${BUILD_TOOLS}${RESET}"
+else
+    echo -e "  Build Tools     : ${RED}None installed${RESET}"
+fi
+echo ""
+
+# 4. Automation & Deployment Tooling
+echo -e "${BOLD}4. Automation & CLI Tooling${RESET}"
+if command -v fastlane >/dev/null 2>&1; then
+    echo -e "  Fastlane        : ${GREEN}$(fastlane --version 2>&1 | head -n 1 | awk '{print $NF}')${RESET}"
+else
+    echo -e "  Fastlane        : ${RED}Not found${RESET}"
+fi
+if command -v bundletool >/dev/null 2>&1; then
+    echo -e "  Bundletool      : ${GREEN}1.18.3 wrapper active (/usr/local/bin/bundletool)${RESET}"
+else
+    echo -e "  Bundletool      : ${RED}Not found${RESET}"
+fi
+echo -e "  Ruby            : $(ruby -v 2>&1 | awk '{print $1, $2}')"
+echo -e "  Python 3        : $(python3 --version 2>&1 | awk '{print $2}')"
+echo -e "  GitHub CLI (gh) : $(gh --version 2>&1 | head -n 1 | awk '{print $3}')"
+echo ""
+
+# 5. Network & Internal Adapters
+echo -e "${BOLD}5. Network Environment & Internal Adapters${RESET}"
+# Check Proxy
+PROXY_VAL="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
+if [ -n "$PROXY_VAL" ]; then
+    echo -e "  HTTP/HTTPS Proxy: ${YELLOW}Active (${PROXY_VAL})${RESET}"
+else
+    echo -e "  HTTP/HTTPS Proxy: ${GREEN}Direct / Unrestricted (No proxy set)${RESET}"
+fi
+
+# Check CA Certificates
+CA_COUNT=$(ls /certificates/*.crt /certificates/*.pem /usr/local/share/ca-certificates/*.crt 2>/dev/null | wc -l)
+if [ "$CA_COUNT" -gt 0 ]; then
+    echo -e "  Corporate CA    : ${GREEN}${CA_COUNT} custom certificate(s) detected and registered${RESET}"
+else
+    echo -e "  Corporate CA    : ${CYAN}Standard Mozilla/Ubuntu root truststore${RESET}"
+fi
+
+# Check Nexus / Mirrors
+MIRROR_VAL="${NEXUS_URLS:-${NEXUS_URL:-${INTERNAL_MAVEN_URL:-}}}"
+if [ -n "$MIRROR_VAL" ]; then
+    echo -e "  Nexus Mirror    : ${YELLOW}Active -> ${MIRROR_VAL}${RESET}"
+    if [ -f /home/runner/.gradle/init.d/nexus-mirror.init.gradle ]; then
+        echo -e "  Gradle Init Hook: ${GREEN}nexus-mirror.init.gradle configured${RESET}"
+    fi
+else
+    echo -e "  Nexus Mirror    : ${GREEN}Standard direct repositories (Google, MavenCentral, GradlePortal)${RESET}"
+fi
+echo ""
+
+# 6. Connectivity Quick-Check
+echo -e "${BOLD}6. Connectivity Probes${RESET}"
+test_url() {
+    local target="$1"
+    local name="$2"
+    if curl -s -m 3 -o /dev/null "$target"; then
+        echo -e "  ${name} : ${GREEN}Reachable (HTTP OK)${RESET}"
+    else
+        echo -e "  ${name} : ${YELLOW}Unreachable or blocked (HTTP/DNS fail)${RESET}"
+    fi
+}
+
+test_url "https://dl.google.com" "Google Android Maven (dl.google.com)"
+test_url "https://repo.maven.apache.org" "Maven Central (repo.maven.apache.org)"
+
+if [ -n "$NEXUS_URL" ]; then
+    CLEAN_NEXUS=$(echo "$NEXUS_URL" | cut -d',' -f1 | tr -d ' ')
+    test_url "$CLEAN_NEXUS" "Corporate Nexus (${CLEAN_NEXUS})"
+fi
+
+echo -e "\n${BOLD}${GREEN}✔ CI Doctor diagnostics complete!${RESET}\n"

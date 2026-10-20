@@ -3,7 +3,7 @@
 # Optimized, Multi-arch (amd64 / arm64), Universal (Internet & Enterprise Ready)
 # Includes: Android SDK (API 35, 36, 37), Build-tools 35, 36, 37,
 #           OpenJDK 17 & 21 (Headless), Fastlane, Ruby, Python3, Bundletool (1.18.3),
-#           GitHub CLI (gh), Universal Network Auto-Detection Engine
+#           GitHub CLI (gh), ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
 
 FROM ubuntu:24.04
@@ -17,7 +17,8 @@ ARG DEBIAN_FRONTEND="noninteractive"
 ENV ANDROID_HOME="/opt/android-sdk" \
     ANDROID_SDK_ROOT="/opt/android-sdk" \
     BUNDLETOOL_PATH="/opt/bundletool/bundletool.jar" \
-    GRADLE_USER_HOME="/root/.gradle" \
+    GRADLE_USER_HOME="/home/runner/.gradle" \
+    HOME="/home/runner" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US.UTF-8" \
     LC_ALL="en_US.UTF-8" \
@@ -52,6 +53,11 @@ RUN apt-get update -qq && \
         zlib1g-dev && \
     locale-gen ${LANG} && \
     update-locale LANG=${LANG} LC_ALL=${LC_ALL} && \
+    # Create non-root runner user (UID 1000, GID 0 for OpenShift/K8s/GitLab Runner arbitrary UID)
+    useradd -u 1000 -g 0 -m -s /bin/bash runner && \
+    mkdir -p /home/runner/.gradle && \
+    mkdir -p /root && \
+    ln -s /home/runner/.gradle /root/.gradle && \
     # Configure pip for CI scripts without PEP 668 restriction
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
@@ -72,7 +78,7 @@ RUN apt-get update -qq && \
     # Clean apt and gem caches
     apt-get clean && \
     apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.gem /root/.bundle
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle
 
 # Configure default JAVA_HOME and PATH
 ENV JAVA_HOME="/opt/default-jdk"
@@ -106,12 +112,18 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     # Create helper script to dynamically install any SDK version on the fly
     printf '#!/bin/bash\nset -e\nTARGET="$1"\nif [ -z "$TARGET" ]; then\n  echo "Usage: install-sdk-version <platform_number_or_package>"\n  exit 1\nfi\nyes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true\nif [[ "$TARGET" =~ ^[0-9]+$ ]]; then\n  echo "Installing Android platform $TARGET..."\n  yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${TARGET}" "build-tools;${TARGET}.0.0" >/dev/null 2>&1 || yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${TARGET}" >/dev/null 2>&1\nelse\n  yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$TARGET" >/dev/null 2>&1\nfi\necho "Finished installing $TARGET"\n' > /usr/local/bin/install-sdk-version && \
     chmod +x /usr/local/bin/install-sdk-version && \
-    # GitLab Runner & local workspace compatibility
+    # Global permissions for hardened non-root / arbitrary UID execution
     mkdir -p /builds /project /certificates && \
     chmod -R 777 ${ANDROID_HOME} && \
+    chmod -R 777 /home/runner && \
+    chmod -R 777 /opt/default-jdk/lib/security/cacerts 2>/dev/null || true && \
+    chmod -R 777 /usr/local/share/ca-certificates 2>/dev/null || true && \
     chmod 777 /builds /project /certificates
 
-# Copy and configure universal entrypoint
+# Copy and install utilities
+COPY ci-doctor /usr/local/bin/ci-doctor
+RUN chmod +x /usr/local/bin/ci-doctor
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

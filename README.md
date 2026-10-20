@@ -24,6 +24,16 @@ It features a **Universal Dual-Mode Network Engine** that runs out-of-the-box in
 - **☕ Dual OpenJDK (17 & 21 Headless)**:
   - **OpenJDK 21** as default (standard for AGP 8.8+ & AGP 9.0).
   - **OpenJDK 17** switchable via `switch-jdk 17`.
+- **⚡ Built-in Gradle CI Performance Tuning**:
+  - `org.gradle.daemon=false` (prevents memory leaks and hung processes in CI).
+  - `org.gradle.parallel=true` & `org.gradle.caching=true` (blazing fast parallel builds & caching).
+  - `org.gradle.vfs.watch=false` (avoids useless inotify watcher overhead in containers).
+  - Pre-tuned JVM flags (`-Xmx4g -XX:+UseG1GC -XX:+TieredCompilation`).
+- **🛡️ Universal Root & Non-Root Support**:
+  - Engineered for strict enterprise security policies (OpenShift, hardened Kubernetes, non-root GitLab Runners, arbitrary UIDs like `1000:0`).
+  - World-writable Gradle home (`/home/runner/.gradle`) and workspace directories (`/builds`, `/project`) avoiding all "Permission Denied" crashes.
+- **🩺 Integrated `ci-doctor` Diagnostic Tool**:
+  - Single CLI command that validates in 1 second: Java versions, Android SDKs, build-tools, proxy status, CA certificates, and tests real HTTP connectivity to Google, Maven, and Nexus!
 - **🛠️ Complete CI & Deployment Toolkit**:
   - **Fastlane & Bundler** (latest).
   - **Python 3** (`python3`, `pip`, `venv`) configured without PEP 668 restrictions.
@@ -142,6 +152,9 @@ build:
 ## 💡 Practical CLI Commands
 
 ```bash
+# Run CI Doctor diagnostics & connectivity check
+ci-doctor
+
 # Switch between JDK 17 and 21
 switch-jdk 17
 switch-jdk 21
