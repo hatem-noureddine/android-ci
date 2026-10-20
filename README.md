@@ -79,16 +79,26 @@ variables:
 ```
 The entrypoint automatically writes proxy parameters into `/root/.gradle/gradle.properties`.
 
-#### 3. Nexus / Artifactory Mirroring
-Define your internal repository mirror:
-```yaml
-variables:
-  NEXUS_URL: "https://nexus.internal.domain/repository/maven-public/"
-  # Optional credentials:
-  NEXUS_USER: "ci-user"
-  NEXUS_PASSWORD: "$NEXUS_CI_PASSWORD"
-```
-The entrypoint generates an automated Gradle initialization script redirecting all Maven repositories to your internal mirror.
+#### 3. Nexus / Artifactory Multi-Repository & Auto-Detection
+The container supports both **automatic sub-repository derivation** from a base URL and **multiple distinct repository URLs**:
+
+- **Option A (Base URL Auto-Detection)**: Simply pass your Nexus host. The container will automatically derive standard Nexus 3 group and release endpoints (`/repository/maven-public/` and `/repository/maven-releases/`):
+  ```yaml
+  variables:
+    NEXUS_URL: "https://nexus.internal.domain"
+  ```
+- **Option B (Multiple URLs)**: Declare multiple repositories separated by commas:
+  ```yaml
+  variables:
+    NEXUS_URLS: "https://nexus.internal.domain/repository/maven-public/, https://nexus.internal.domain/repository/custom-android-libs/"
+  ```
+- **Authentication**: If your internal Nexus requires authentication, simply add:
+  ```yaml
+  variables:
+    NEXUS_USER: "ci-user"
+    NEXUS_PASSWORD: "$NEXUS_CI_PASSWORD"
+  ```
+  *(Credentials are applied automatically to all configured Nexus endpoints. If omitted, anonymous access is used).*
 
 ---
 

@@ -81,19 +81,55 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Enterprise Nexus / Artifactory Mirror Auto-Detection
-# Active only if NEXUS_URL, INTERNAL_MAVEN_URL, or ARTIFACTORY_URL is defined.
-# In standard internet mode, Gradle directly accesses official Google and MavenCentral.
+# 3. Enterprise Nexus / Artifactory Multi-URL & Auto-Derivation Engine
+# - Automatically detects base URL (e.g. https://nexus.corp) and derives
+#   standard sub-repositories (/repository/maven-public/ and /repository/maven-releases/)
+# - Supports multiple URLs (comma or space separated)
+# - In standard internet mode, Gradle directly accesses official Google/Maven repos.
 # ------------------------------------------------------------------------------
-TARGET_MIRROR="${NEXUS_URL:-${INTERNAL_MAVEN_URL:-${ARTIFACTORY_URL:-${MAVEN_REPO_URL:-}}}}"
-if [ -n "$TARGET_MIRROR" ]; then
+ALL_NEXUS_INPUT="${NEXUS_URLS:-${NEXUS_URL:-${INTERNAL_MAVEN_URL:-${ARTIFACTORY_URL:-${MAVEN_REPO_URL:-}}}}}"
+
+if [ -n "$ALL_NEXUS_INPUT" ]; then
     mkdir -p /root/.gradle/init.d
-    CREDENTIALS_BLOCK=""
+
+    CLEAN_INPUT=$(echo "$ALL_NEXUS_INPUT" | tr ',' ' ')
+    PARSED_REPOS=()
+    PRIMARY_MIRROR=""
+
+    for raw_url in $CLEAN_INPUT; do
+        url="${raw_url%/}"
+        [ -z "$url" ] && continue
+
+        # If bare base URL passed (without /repository/ or /artifactory/), auto-derive standard repos
+        if [[ "$url" != *"/repository/"* ]] && [[ "$url" != *"/artifactory/"* ]]; then
+            derived_group="${url}/repository/maven-public/"
+            derived_releases="${url}/repository/maven-releases/"
+            PARSED_REPOS+=("$derived_group")
+            PARSED_REPOS+=("$derived_releases")
+            [ -z "$PRIMARY_MIRROR" ] && PRIMARY_MIRROR="$derived_group"
+        else
+            PARSED_REPOS+=("$url")
+            [ -z "$PRIMARY_MIRROR" ] && PRIMARY_MIRROR="$url"
+        fi
+    done
+
+    # Authentication credentials block if provided
     MIRROR_USER="${NEXUS_USER:-${ARTIFACTORY_USER:-}}"
     MIRROR_PASS="${NEXUS_PASSWORD:-${ARTIFACTORY_PASSWORD:-}}"
+    CREDENTIALS_BLOCK=""
     if [ -n "$MIRROR_USER" ] && [ -n "$MIRROR_PASS" ]; then
         CREDENTIALS_BLOCK="credentials { username = '$MIRROR_USER'; password = '$MIRROR_PASS' }"
     fi
+
+    # Build Groovy repo definitions list
+    GROOVY_REPOS_CODE=""
+    for repo_url in "${PARSED_REPOS[@]}"; do
+        GROOVY_REPOS_CODE="${GROOVY_REPOS_CODE}
+            maven {
+                url = uri('$repo_url')
+                $CREDENTIALS_BLOCK
+            }"
+    done
 
     cat <<EOF > /root/.gradle/init.d/nexus-mirror.init.gradle
 allprojects {
@@ -101,19 +137,27 @@ allprojects {
         repositories {
             all { ArtifactRepository repo ->
                 if (repo instanceof MavenArtifactRepository) {
-                    repo.url = uri('$TARGET_MIRROR')
-                    $CREDENTIALS_BLOCK
+                    def urlStr = repo.url.toString()
+                    if (urlStr.contains("dl.google.com") || urlStr.contains("repo.maven.apache.org") || urlStr.contains("plugins.gradle.org")) {
+                        repo.url = uri('$PRIMARY_MIRROR')
+                        $CREDENTIALS_BLOCK
+                    }
                 }
             }
+            $GROOVY_REPOS_CODE
         }
     }
     repositories {
         all { ArtifactRepository repo ->
             if (repo instanceof MavenArtifactRepository) {
-                repo.url = uri('$TARGET_MIRROR')
-                $CREDENTIALS_BLOCK
+                def urlStr = repo.url.toString()
+                if (urlStr.contains("dl.google.com") || urlStr.contains("repo.maven.apache.org") || urlStr.contains("plugins.gradle.org")) {
+                    repo.url = uri('$PRIMARY_MIRROR')
+                    $CREDENTIALS_BLOCK
+                }
             }
         }
+        $GROOVY_REPOS_CODE
     }
 }
 EOF
