@@ -172,5 +172,41 @@ bundle exec fastlane internal_deploy
 
 ---
 
+## 🧪 Automated Testing Suite (`tests/test-image.sh`)
+
+The repository includes a comprehensive 6-stage test suite that validates the image prior to release:
+
+1. **`ci-doctor` execution**: Verifies environment sanity, JDKs, tools, and probes.
+2. **Dual-JDK Switching**: Verifies smooth switching between OpenJDK 17 and OpenJDK 21.
+3. **Android SDK Integrity**: Confirms platforms `android-35`, `android-36`, `android-37` and build-tools `35.0.0`, `36.0.0`, `37.0.0`.
+4. **Tooling Verification**: Checks `bundletool`, `fastlane`, `python3`, `pip`, and `gh`.
+5. **Real Android Project Compilation**: Builds and runs unit tests on `test_projects/SampleProject` (AGP 8.7.2, Gradle 8.11.1, API 35) and generates `app-release-unsigned.apk`.
+6. **Fastlane Pipeline**: Runs Fastlane lane `test`.
+
+To execute the test suite locally against your container:
+```bash
+docker run --rm \
+  -v "$(pwd)":/project \
+  -w /project \
+  hateum/android-ci-box:latest \
+  /project/tests/test-image.sh
+```
+
+---
+
+## 🚢 Docker Hub Automated Publishing
+
+A fully automated GitHub Actions pipeline ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) handles testing, multi-architecture compilation, and publishing:
+
+1. **Pull Requests & Commits**: Builds the test image and executes the complete 6-stage test suite + Non-Root security test.
+2. **Push to `main` or Tag `v*.*.*`**: Upon successful test completion, compiles multi-arch (`linux/amd64` and `linux/arm64`) using Docker Buildx with GitHub Actions cache, and publishes to [Docker Hub (`hateum/android-ci-box`)](https://hub.docker.com/r/hateum/android-ci-box).
+
+### Setup Credentials on GitHub
+In your GitHub repository (**Settings > Secrets and variables > Actions**), add:
+- `DOCKERHUB_USERNAME`: `hateum`
+- `DOCKERHUB_TOKEN`: Personal Access Token with `Read & Write` scope.
+
+---
+
 ## 📄 License
 This project is licensed under the [MIT License](LICENSE).
