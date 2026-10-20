@@ -1,16 +1,16 @@
 # ==============================================================================
 # Docker Android CI Build Box
-# Optimized, Multi-arch (amd64 / arm64), Corporate & GitLab Runner Ready
-# Includes: Android SDK (API 34, 35, 36 & dynamic 37), Build-tools 34, 35, 36,
-#           OpenJDK 17 & 21, Fastlane, Ruby, Python3, Bundletool, GitHub CLI (gh),
-#           Auto-detection for Corporate CA, HTTP Proxy, and Nexus/Artifactory
+# Optimized, Multi-arch (amd64 / arm64), Universal (Internet & Enterprise Ready)
+# Includes: Android SDK (API 35, 36, 37), Build-tools 35, 36, 37,
+#           OpenJDK 17 & 21 (Headless), Fastlane, Ruby, Python3, Bundletool (1.18.3),
+#           GitHub CLI (gh), Universal Network Auto-Detection Engine
 # ==============================================================================
 
 FROM ubuntu:24.04
 
-# Build Arguments
-ARG ANDROID_SDK_TOOLS_VERSION="13114758"
-ARG BUNDLETOOL_VERSION="1.18.1"
+# Build Arguments with verified latest versions
+ARG ANDROID_SDK_TOOLS_VERSION="15859902"
+ARG BUNDLETOOL_VERSION="1.18.3"
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Standard Environment Variables
@@ -78,7 +78,7 @@ RUN apt-get update -qq && \
 ENV JAVA_HOME="/opt/default-jdk"
 ENV PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
 
-# Install Android Command-Line Tools & SDK components
+# Install Android Command-Line Tools & SDK components (API 35, 36, 37 + build-tools)
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip" -o /tmp/cmdline-tools.zip && \
     unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools && \
@@ -86,18 +86,16 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     rm -f /tmp/cmdline-tools.zip && \
     # Pre-accept all licenses
     yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 && \
-    # Install platform-tools, platforms and build-tools for API 34, 35, 36
+    # Install platform-tools, platforms and build-tools for API 35, 36, 37
     ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install \
         "platform-tools" \
-        "platforms;android-34" \
         "platforms;android-35" \
         "platforms;android-36" \
-        "build-tools;34.0.0" \
+        "platforms;android-37" \
         "build-tools;35.0.0" \
-        "build-tools;36.0.0" > /dev/null 2>&1 || true && \
-    # Gracefully attempt API 37 if available on Google channels
-    ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-37" > /dev/null 2>&1 || true && \
-    # Download Bundletool and create executable wrapper
+        "build-tools;36.0.0" \
+        "build-tools;37.0.0" > /dev/null 2>&1 || true && \
+    # Download Bundletool (1.18.3) and create executable wrapper
     mkdir -p /opt/bundletool && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o ${BUNDLETOOL_PATH} && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
@@ -113,7 +111,7 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     chmod -R 777 ${ANDROID_HOME} && \
     chmod 777 /builds /project /certificates
 
-# Copy and configure entrypoint
+# Copy and configure universal entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -122,7 +120,7 @@ WORKDIR /project
 
 # OCI Standard Image Metadata Labels
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Android SDK 34/35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & GitLab Runner auto-detection" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Android SDK 35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \

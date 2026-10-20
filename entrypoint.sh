@@ -2,10 +2,15 @@
 set -e
 
 # ==============================================================================
-# Android CI Auto-Detection Engine for Internal Networks & GitLab Runner
+# Universal Dual-Mode Network & CI Auto-Detection Engine
+# Seamless execution in both standard unrestricted Internet and enterprise intranets
 # ==============================================================================
 
-# 1. Corporate CA Certificates Auto-Import into Linux & Java truststores
+# ------------------------------------------------------------------------------
+# 1. Enterprise Corporate CA Certificates Auto-Detection & Injection
+# Active only if custom certificates are provided (volume mount or environment)
+# In standard internet mode, default Ubuntu/Mozilla CA certificates are untouched.
+# ------------------------------------------------------------------------------
 CERT_DIRS=("/certificates" "/usr/local/share/ca-certificates")
 CA_IMPORTED=0
 
@@ -16,9 +21,9 @@ for cdir in "${CERT_DIRS[@]}"; do
             cert_name=$(basename "$cert")
             # Copy to system ca-certificates directory if mounted elsewhere
             if [ "$cdir" != "/usr/local/share/ca-certificates" ]; then
-                cp -f "$cert" /usr/local/share/ca-certificates/
+                cp -f "$cert" /usr/local/share/ca-certificates/ 2>/dev/null || true
             fi
-            # Import certificate into Java's cacerts truststore
+            # Import into Java cacerts truststore for Gradle / Kotlin compiler
             if [ -n "$JAVA_HOME" ] && [ -f "$JAVA_HOME/lib/security/cacerts" ]; then
                 keytool -importcert -noprompt -trustcacerts \
                     -keystore "$JAVA_HOME/lib/security/cacerts" \
@@ -31,28 +36,34 @@ for cdir in "${CERT_DIRS[@]}"; do
     fi
 done
 
+# If CA URL provided in environment (e.g. CORPORATE_CA_URL or CA_CERT_URL)
+TARGET_CA_URL="${CORPORATE_CA_URL:-${CA_CERT_URL:-}}"
+if [ -n "$TARGET_CA_URL" ]; then
+    curl -fsSL -k "$TARGET_CA_URL" -o /usr/local/share/ca-certificates/corporate-url-ca.crt 2>/dev/null || true
+    if [ -f /usr/local/share/ca-certificates/corporate-url-ca.crt ]; then
+        CA_IMPORTED=1
+        if [ -n "$JAVA_HOME" ] && [ -f "$JAVA_HOME/lib/security/cacerts" ]; then
+            keytool -importcert -noprompt -trustcacerts \
+                -keystore "$JAVA_HOME/lib/security/cacerts" \
+                -storepass changeit \
+                -alias "corp-url-ca" \
+                -file /usr/local/share/ca-certificates/corporate-url-ca.crt >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
 if [ "$CA_IMPORTED" -eq 1 ]; then
     update-ca-certificates >/dev/null 2>&1 || true
 fi
 
-# Support dynamic CA download from URL if provided (e.g. CORPORATE_CA_URL)
-if [ -n "$CORPORATE_CA_URL" ]; then
-    curl -fsSL -k "$CORPORATE_CA_URL" -o /usr/local/share/ca-certificates/corporate-ca.crt 2>/dev/null || true
-    if [ -f /usr/local/share/ca-certificates/corporate-ca.crt ]; then
-        update-ca-certificates >/dev/null 2>&1 || true
-        keytool -importcert -noprompt -trustcacerts \
-            -keystore "$JAVA_HOME/lib/security/cacerts" \
-            -storepass changeit \
-            -alias "corporate-url-ca" \
-            -file /usr/local/share/ca-certificates/corporate-ca.crt >/dev/null 2>&1 || true
-    fi
-fi
-
-# 2. HTTP / HTTPS Corporate Proxy Auto-Configuration for Gradle
-mkdir -p /root/.gradle /root/.gradle/init.d
-
-RAW_PROXY="${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy}}}}"
+# ------------------------------------------------------------------------------
+# 2. Enterprise Corporate Proxy Auto-Detection
+# Active only if HTTP_PROXY or HTTPS_PROXY is defined.
+# If no proxy variables exist, no proxy configuration is written (pure direct internet).
+# ------------------------------------------------------------------------------
+RAW_PROXY="${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}"
 if [ -n "$RAW_PROXY" ]; then
+    mkdir -p /root/.gradle
     CLEAN_PROXY=$(echo "$RAW_PROXY" | sed -e 's|^[^/]*//||')
     PROXY_HOST=$(echo "$CLEAN_PROXY" | cut -d: -f1)
     PROXY_PORT=$(echo "$CLEAN_PROXY" | cut -d: -f2 | cut -d/ -f1)
@@ -69,12 +80,19 @@ systemProp.https.nonProxyHosts=$NON_PROXY_JAVA
 EOF
 fi
 
-# 3. Nexus / Artifactory Internal Mirror Auto-Configuration
-TARGET_MIRROR="${NEXUS_URL:-${INTERNAL_MAVEN_URL:-${MAVEN_REPO_URL}}}"
+# ------------------------------------------------------------------------------
+# 3. Enterprise Nexus / Artifactory Mirror Auto-Detection
+# Active only if NEXUS_URL, INTERNAL_MAVEN_URL, or ARTIFACTORY_URL is defined.
+# In standard internet mode, Gradle directly accesses official Google and MavenCentral.
+# ------------------------------------------------------------------------------
+TARGET_MIRROR="${NEXUS_URL:-${INTERNAL_MAVEN_URL:-${ARTIFACTORY_URL:-${MAVEN_REPO_URL:-}}}}"
 if [ -n "$TARGET_MIRROR" ]; then
+    mkdir -p /root/.gradle/init.d
     CREDENTIALS_BLOCK=""
-    if [ -n "$NEXUS_USER" ] && [ -n "$NEXUS_PASSWORD" ]; then
-        CREDENTIALS_BLOCK="credentials { username = '$NEXUS_USER'; password = '$NEXUS_PASSWORD' }"
+    MIRROR_USER="${NEXUS_USER:-${ARTIFACTORY_USER:-}}"
+    MIRROR_PASS="${NEXUS_PASSWORD:-${ARTIFACTORY_PASSWORD:-}}"
+    if [ -n "$MIRROR_USER" ] && [ -n "$MIRROR_PASS" ]; then
+        CREDENTIALS_BLOCK="credentials { username = '$MIRROR_USER'; password = '$MIRROR_PASS' }"
     fi
 
     cat <<EOF > /root/.gradle/init.d/nexus-mirror.init.gradle
@@ -101,10 +119,13 @@ allprojects {
 EOF
 fi
 
-# 4. GitLab Runner directory permissions compatibility
-mkdir -p /builds /project
-chmod 777 /builds /project 2>/dev/null || true
+# ------------------------------------------------------------------------------
+# 4. Workspaces & CI Runners Compatibility
+# Ensures frictionless permissions on GitLab Runner (/builds) and standard mounts
+# ------------------------------------------------------------------------------
+mkdir -p /builds /project /certificates
+chmod 777 /builds /project /certificates 2>/dev/null || true
 chmod -R 777 /root/.gradle 2>/dev/null || true
 
-# Execute CMD / GitLab CI command
+# Execute CMD / CI command
 exec "$@"
