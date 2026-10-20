@@ -27,7 +27,7 @@ ENV ANDROID_HOME="/opt/android-sdk" \
     LC_ALL="en_US.UTF-8" \
     TZ="UTC"
 
-# Base system dependencies, Python3, Ruby & OpenJDK (headless to minimize image size)
+# Layer 1: Base system dependencies, Python3, Ruby & OpenJDK (headless)
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
         apt-transport-https \
@@ -56,11 +56,13 @@ RUN apt-get update -qq && \
         zlib1g-dev && \
     locale-gen ${LANG} && \
     update-locale LANG=${LANG} LC_ALL=${LC_ALL} && \
-    # Create non-root runner user (UID 1000, GID 0 for OpenShift/K8s/GitLab Runner arbitrary UID)
-    useradd -u 1000 -g 0 -m -s /bin/bash runner && \
+    # Setup non-root runner user (handling Ubuntu 24.04 default ubuntu user)
+    touch /etc/subuid /etc/subgid && \
+    (userdel -r ubuntu 2>/dev/null || true) && \
+    (id -u runner >/dev/null 2>&1 || useradd -u 1000 -g 0 -m -s /bin/bash runner) && \
     mkdir -p /home/runner/.gradle && \
     mkdir -p /root && \
-    ln -s /home/runner/.gradle /root/.gradle && \
+    ln -sf /home/runner/.gradle /root/.gradle && \
     # Configure pip for CI scripts without PEP 668 restriction
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
@@ -69,31 +71,37 @@ RUN apt-get update -qq && \
     ln -s /usr/lib/jvm/java-21-openjdk-${ARCH} /opt/jdk-21 && \
     ln -s /usr/lib/jvm/java-17-openjdk-${ARCH} /opt/jdk-17 && \
     ln -s /opt/jdk-21 /opt/default-jdk && \
-    # Install GitHub CLI (gh)
-    mkdir -p -m 755 /etc/apt/keyrings && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Layer 2: Install GitHub CLI (gh)
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
     chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
     apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends gh && \
-    # Fastlane and Bundler (latest, installed without docs to save space)
-    gem install bundler fastlane --no-document && \
-    # Install Latest Stable Gradle (9.8.2) Standalone
-    mkdir -p /opt/gradle && \
+    apt-get clean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Layer 3: Fastlane and Bundler
+RUN gem install bundler fastlane --no-document && \
+    rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle
+
+# Layer 4: Install Latest Stable Gradle (9.8.2) Standalone
+RUN mkdir -p /opt/gradle && \
     curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip && \
     unzip -q /tmp/gradle.zip -d /opt/gradle && \
     ln -s /opt/gradle/gradle-${GRADLE_VERSION}/bin/gradle /usr/local/bin/gradle && \
-    rm -f /tmp/gradle.zip && \
-    # Clean apt and gem caches
-    apt-get clean && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle
+    rm -f /tmp/gradle.zip
 
 # Configure default JAVA_HOME and PATH (including Gradle and Android tools)
 ENV JAVA_HOME="/opt/default-jdk"
 ENV PATH="${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
 
-# Install Android Command-Line Tools & SDK components (API 35, 36, 37 + build-tools)
+# Layer 5: Install Android Command-Line Tools & SDK components (API 35, 36, 37 + build-tools)
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip" -o /tmp/cmdline-tools.zip && \
     unzip -q /tmp/cmdline-tools.zip -d ${ANDROID_HOME}/cmdline-tools && \
