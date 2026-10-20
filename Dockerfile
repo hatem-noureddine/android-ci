@@ -1,9 +1,10 @@
 # ==============================================================================
 # Docker Android CI Build Box
 # Optimized, Multi-arch (amd64 / arm64), Universal (Internet & Enterprise Ready)
-# Includes: Android SDK (API 35, 36, 37), Build-tools 35, 36, 37,
-#           OpenJDK 17 & 21 (Headless), Fastlane, Ruby, Python3, Bundletool (1.18.3),
-#           GitHub CLI (gh), ci-doctor CLI, Hardened Root & Non-Root Support
+# Includes: Gradle 9.8.2 (Standalone & Wrapper ready), Android SDK (API 35, 36, 37),
+#           Build-tools 35, 36, 37, OpenJDK 17 & 21 (Headless), Fastlane, Ruby,
+#           Python3, Bundletool (1.18.3), GitHub CLI (gh), ci-doctor CLI,
+#           Hardened Root & Non-Root Support
 # ==============================================================================
 
 FROM ubuntu:24.04
@@ -11,12 +12,14 @@ FROM ubuntu:24.04
 # Build Arguments with verified latest versions
 ARG ANDROID_SDK_TOOLS_VERSION="15859902"
 ARG BUNDLETOOL_VERSION="1.18.3"
+ARG GRADLE_VERSION="9.8.2"
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Standard Environment Variables
 ENV ANDROID_HOME="/opt/android-sdk" \
     ANDROID_SDK_ROOT="/opt/android-sdk" \
     BUNDLETOOL_PATH="/opt/bundletool/bundletool.jar" \
+    GRADLE_HOME="/opt/gradle/gradle-${GRADLE_VERSION}" \
     GRADLE_USER_HOME="/home/runner/.gradle" \
     HOME="/home/runner" \
     LANG="en_US.UTF-8" \
@@ -75,14 +78,20 @@ RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends gh && \
     # Fastlane and Bundler (latest, installed without docs to save space)
     gem install bundler fastlane --no-document && \
+    # Install Latest Stable Gradle (9.8.2) Standalone
+    mkdir -p /opt/gradle && \
+    curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip && \
+    unzip -q /tmp/gradle.zip -d /opt/gradle && \
+    ln -s /opt/gradle/gradle-${GRADLE_VERSION}/bin/gradle /usr/local/bin/gradle && \
+    rm -f /tmp/gradle.zip && \
     # Clean apt and gem caches
     apt-get clean && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle
 
-# Configure default JAVA_HOME and PATH
+# Configure default JAVA_HOME and PATH (including Gradle and Android tools)
 ENV JAVA_HOME="/opt/default-jdk"
-ENV PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+ENV PATH="${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
 
 # Install Android Command-Line Tools & SDK components (API 35, 36, 37 + build-tools)
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
@@ -115,6 +124,7 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     # Global permissions for hardened non-root / arbitrary UID execution
     mkdir -p /builds /project /certificates && \
     chmod -R 777 ${ANDROID_HOME} && \
+    chmod -R 777 /opt/gradle && \
     chmod -R 777 /home/runner && \
     chmod -R 777 /opt/default-jdk/lib/security/cacerts 2>/dev/null || true && \
     chmod -R 777 /usr/local/share/ca-certificates 2>/dev/null || true && \
@@ -132,7 +142,7 @@ WORKDIR /project
 
 # OCI Standard Image Metadata Labels
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Android SDK 35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & Universal Network Auto-Detection" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \

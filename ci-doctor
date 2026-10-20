@@ -54,6 +54,12 @@ echo ""
 
 # 4. Automation & Deployment Tooling
 echo -e "${BOLD}4. Automation & CLI Tooling${RESET}"
+if command -v gradle >/dev/null 2>&1; then
+    GRADLE_VER=$(gradle -version 2>&1 | grep "Gradle " | head -n 1 | awk '{print $2}')
+    echo -e "  Gradle (Global) : ${GREEN}${GRADLE_VER:-Active}${RESET}"
+else
+    echo -e "  Gradle (Global) : ${RED}Not found${RESET}"
+fi
 if command -v fastlane >/dev/null 2>&1; then
     echo -e "  Fastlane        : ${GREEN}$(fastlane --version 2>&1 | head -n 1 | awk '{print $NF}')${RESET}"
 else
