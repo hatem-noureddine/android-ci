@@ -66,12 +66,12 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # Test 4: Tooling Executables Verification
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, bundletool, fastlane, python, gh)...${RESET}"
-gradle --version | head -n 3
+gradle --version
 bundletool version
-fastlane --version | head -n 1
+fastlane --version
 python3 --version
 pip --version
-gh --version | head -n 1
+gh --version
 echo -e "${GREEN}✔ All CLI tools verified!${RESET}\n"
 
 # ------------------------------------------------------------------------------
