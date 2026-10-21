@@ -133,6 +133,7 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
+    environment: Docker
     permissions:
       contents: read
       packages: write
