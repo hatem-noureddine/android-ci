@@ -331,7 +331,7 @@ L'image exécute une suite de **7 tests d'intégration automatisés** :
 3. **Android SDK Integrity** : Présence certifiée des API 35, 36, 37.0 (et symlink `android-37`) ainsi que des build-tools `35.0.0`, `36.0.0`, `37.0.0`.
 4. **Tooling Verification** : Disponibilité et bon fonctionnement de `gradle 9.8.2`, `bundletool 1.18.3`, `fastlane`, `python3`, `pip`, `gh`.
 5. **Simulation Réseau Entreprise** : Test d'injection d'un proxy corporate, de miroirs Nexus/Artifactory et d'un certificat d'autorité CA dans `gradle.properties` et le keystore `cacerts`.
-6. **Compilation et Linters Réels Android** : Compilation complète du `SampleProject` sous **AGP 9.1.1**, **Gradle 9.8.2**, **Kotlin 2.4.20**, **compileSdk 37 / targetSdk 37**, avec exécution des tests unitaires (`./gradlew test lintRelease check assembleRelease`).
+6. **Compilation et Linters Réels Android** : Compilation complète du `SampleProject` sous **AGP 9.4.1**, **Gradle 9.8.2**, **Kotlin 2.4.20**, **compileSdk 37 / targetSdk 37**, avec exécution des tests unitaires (`./gradlew test lintRelease check assembleRelease`).
 7. **Pipeline Fastlane** : Exécution de la lane `fastlane test`.
 
 Pour exécuter la suite de tests en local :
