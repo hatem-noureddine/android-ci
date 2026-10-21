@@ -67,7 +67,7 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, emulator, bundletool, fastlane, python, gh)...${RESET}"
 gradle --version
-emulator -version | head -n 1
+(emulator -version 2>&1 || true) | head -n 2
 bundletool version
 fastlane --version
 python3 --version

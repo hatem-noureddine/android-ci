@@ -41,9 +41,13 @@ RUN apt-get update -qq && \
         git-lfs \
         gnupg \
         libasound2t64 \
+        libegl1 \
+        libgl1 \
         libglu1-mesa \
         libnss3 \
+        libpng16-16t64 \
         libpulse0 \
+        libvulkan1 \
         libxcomposite1 \
         libxcursor1 \
         libxi6 \
