@@ -28,17 +28,17 @@ jobs:
           set -euo pipefail
 
           # --- 1. Gradle Check ---
-          CURRENT_GRADLE=$(grep 'ENV GRADLE_VERSION=' Dockerfile | cut -d'"' -f2)
-          LATEST_GRADLE=$(curl -sSL "https://services.gradle.org/versions/current" | grep -o '"version":"[^"]*"' | head -n 1 | cut -d'"' -f4)
+          CURRENT_GRADLE=$(grep 'ARG GRADLE_VERSION=' Dockerfile | cut -d'"' -f2)
+          LATEST_GRADLE=$(curl -sSL "https://services.gradle.org/versions/current" | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n 1 | cut -d'"' -f4)
           
           GRADLE_UPDATE_NEEDED="false"
-          if [ "$CURRENT_GRADLE" != "$LATEST_GRADLE" ]; then
+          if [ -n "$LATEST_GRADLE" ] && [ "$CURRENT_GRADLE" != "$LATEST_GRADLE" ]; then
             GRADLE_UPDATE_NEEDED="true"
           fi
 
           # --- 2. Bundletool Check ---
-          CURRENT_BUNDLETOOL=$(grep 'ENV BUNDLETOOL_VERSION=' Dockerfile | cut -d'"' -f2)
-          LATEST_BUNDLETOOL=$(curl -sSL "https://api.github.com/repos/google/bundletool/releases/latest" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 | sed 's/^v//')
+          CURRENT_BUNDLETOOL=$(grep 'ARG BUNDLETOOL_VERSION=' Dockerfile | cut -d'"' -f2)
+          LATEST_BUNDLETOOL=$(curl -sSL -H "User-Agent: bash" "https://api.github.com/repos/google/bundletool/releases/latest" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n 1 | cut -d'"' -f4 | sed 's/^v//')
           
           BUNDLETOOL_UPDATE_NEEDED="false"
           if [ -n "$LATEST_BUNDLETOOL" ] && [ "$CURRENT_BUNDLETOOL" != "$LATEST_BUNDLETOOL" ]; then
@@ -46,8 +46,8 @@ jobs:
           fi
 
           # --- 3. Android Gradle Plugin (AGP) Check ---
-          CURRENT_AGP=$(grep 'com.android.tools.build:gradle:' test_projects/SampleProject/build.gradle | cut -d':' -f4 | tr -d '"')
-          LATEST_AGP=$(curl -sSL "https://dl.google.com/android/maven2/com/android/tools/build/gradle/maven-metadata.xml" | grep -o '<version>9\.[0-9]\+\.[0-9]\+</version>' | tail -n 1 | sed -e 's/<version>//' -e 's/<\/version>//')
+          CURRENT_AGP=$(grep 'com.android.tools.build:gradle' test_projects/SampleProject/build.gradle | awk -F':' '{print $3}' | tr -d ' "')
+          LATEST_AGP=$(curl -sSL "https://dl.google.com/android/maven2/com/android/tools/build/gradle/maven-metadata.xml" | grep -o '<version>[0-9]\+\.[0-9]\+\.[0-9]\+</version>' | tail -n 1 | sed -e 's/<version>//' -e 's/<\/version>//')
           
           AGP_UPDATE_NEEDED="false"
           if [ -n "$LATEST_AGP" ] && [ "$CURRENT_AGP" != "$LATEST_AGP" ]; then
@@ -132,10 +132,10 @@ jobs:
         if: steps.watchdog.outputs.any_update == 'true'
         run: |
           if [ "${{ steps.watchdog.outputs.gradle_update }}" = "true" ]; then
-            sed -i 's/ENV GRADLE_VERSION="${{ steps.watchdog.outputs.current_gradle }}"/ENV GRADLE_VERSION="${{ steps.watchdog.outputs.latest_gradle }}"/' Dockerfile
+            sed -i 's/ARG GRADLE_VERSION="${{ steps.watchdog.outputs.current_gradle }}"/ARG GRADLE_VERSION="${{ steps.watchdog.outputs.latest_gradle }}"/' Dockerfile
           fi
           if [ "${{ steps.watchdog.outputs.bundletool_update }}" = "true" ]; then
-            sed -i 's/ENV BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.current_bundletool }}"/ENV BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.latest_bundletool }}"/' Dockerfile
+            sed -i 's/ARG BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.current_bundletool }}"/ARG BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.latest_bundletool }}"/' Dockerfile
           fi
           if [ "${{ steps.watchdog.outputs.agp_update }}" = "true" ]; then
             sed -i 's/com.android.tools.build:gradle:${{ steps.watchdog.outputs.current_agp }}/com.android.tools.build:gradle:${{ steps.watchdog.outputs.latest_agp }}/' test_projects/SampleProject/build.gradle
