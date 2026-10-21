@@ -170,7 +170,7 @@ jobs:
       - name: Extract Docker metadata & Automated Multi-Tagging
         if: steps.check_creds.outputs.has_creds == 'true'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
