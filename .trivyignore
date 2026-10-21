@@ -1,0 +1,6 @@
+# Trivy ignore list for third-party SDK bundled libraries
+
+# Upstream Bouncy Castle bundled in Google Android commandlinetools
+# (GOSTCTR cipher and trailing dot not applicable to Android CI compilation)
+CVE-2025-14813
+CVE-2026-8763

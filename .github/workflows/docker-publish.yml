@@ -78,6 +78,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          trivyignores: '.trivyignore'
           exit-code: '0'
 
       - name: Upload Trivy Results to GitHub Security Tab
@@ -93,6 +94,7 @@ jobs:
           format: 'table'
           severity: 'CRITICAL'
           ignore-unfixed: true
+          trivyignores: '.trivyignore'
           exit-code: '1'
 
       # --- Integration Tests ---
