@@ -174,7 +174,7 @@ jobs:
       - name: Resolve Release Version
         id: version
         run: |
-          RAW_VER=$(cat VERSION | tr -d '[:space:]')
+          RAW_VER=$(tr -d '[:space:]' < VERSION)
           MAJOR=$(echo "$RAW_VER" | cut -d. -f1)
           MINOR=$(echo "$RAW_VER" | cut -d. -f2)
           {
