@@ -314,16 +314,25 @@ gradle init
 
 ---
 
-## 🧪 Suite de Tests Automatisée (`tests/test-image.sh`)
+## 🧪 Suite de Qualité, Linters & Tests Automatisés
 
-L'image est couverte par une suite de **6 tests d'intégration automatisés** validant son bon fonctionnement avant chaque mise en production :
+Le dépôt applique une stratégie d'assurance qualité à 3 niveaux avant toute mise en production :
 
-1. **`ci-doctor`** : Validation de l'environnement global et de la connectivité.
-2. **Dual-JDK Switching** : Test de bascule bidirectionnelle entre Java 17 et Java 21.
-3. **Android SDK Integrity** : Présence certifiée des API 35, 36, 37 et build-tools.
-4. **Tooling Verification** : Disponibilité de `gradle`, `bundletool`, `fastlane`, `python3`, `gh`.
-5. **Compilation réelle Android** : Compilation et exécution des tests unitaires du projet exemple (`test_projects/SampleProject` sous AGP 8.7.2, Gradle 8.11.1, API 35) avec génération de l'APK Release.
-6. **Pipeline Fastlane** : Exécution de la lane `fastlane test`.
+### 1. Linters et Analyse Statique Continue (Pré-build)
+- **Hadolint** : Validation stricte des bonnes pratiques Dockerfile, ordonnancement des calques et sécurité.
+- **ShellCheck** : Analyse statique et détection de bugs ou failles d'injection sur tous les scripts Shell (`entrypoint.sh`, `ci-doctor`, `bin/switch-jdk`, `bin/install-sdk-version`, `tests/test-image.sh`).
+- **Actionlint** : Vérification syntaxique et sémantique des workflows GitHub Actions (`.github/workflows/*.yml`).
+- **Android Lint** : Analyse approfondie de code Android (`lintRelease`) et vérification d'AAR/Manifest sur le projet d'intégration.
+
+### 2. Suite de Tests Fonctionnels Conteneurisés (`tests/test-image.sh`)
+L'image exécute une suite de **7 tests d'intégration automatisés** :
+1. **`ci-doctor`** : Validation globale de l'environnement, des variables et de la connectivité.
+2. **Dual-JDK Switching** : Test de bascule bidirectionnelle entre Java 17 et Java 21 (`switch-jdk`).
+3. **Android SDK Integrity** : Présence certifiée des API 35, 36, 37.0 (et symlink `android-37`) ainsi que des build-tools `35.0.0`, `36.0.0`, `37.0.0`.
+4. **Tooling Verification** : Disponibilité et bon fonctionnement de `gradle 9.8.2`, `bundletool 1.18.3`, `fastlane`, `python3`, `pip`, `gh`.
+5. **Simulation Réseau Entreprise** : Test d'injection d'un proxy corporate, de miroirs Nexus/Artifactory et d'un certificat d'autorité CA dans `gradle.properties` et le keystore `cacerts`.
+6. **Compilation et Linters Réels Android** : Compilation complète du `SampleProject` sous **AGP 9.1.1**, **Gradle 9.8.2**, **Kotlin 2.4.20**, **compileSdk 37 / targetSdk 37**, avec exécution des tests unitaires (`./gradlew test lintRelease check assembleRelease`).
+7. **Pipeline Fastlane** : Exécution de la lane `fastlane test`.
 
 Pour exécuter la suite de tests en local :
 ```bash
@@ -338,20 +347,24 @@ docker run --rm \
 
 ## 🚢 Publication Automatisée sur Docker Hub & Multi-Tagging
 
-Le pipeline GitHub Actions ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) orchestre la sécurité et la publication multi-architecture :
+Le pipeline GitHub Actions ([`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)) orchestre la qualité, la sécurité et la publication multi-architecture :
 
-1. **Scan de Sécurité Automatisé Trivy** :
-   - Analyse systématique des CVEs sur chaque image construite (`aquasecurity/trivy-action`).
-   - Publication du rapport SARIF directement dans l'onglet **Security > Code scanning** de GitHub.
-   - Blocage strict si des vulnérabilités critiques non corrigées (`CRITICAL`) sont détectées.
-2. **Suite de Tests d'Intégration** :
-   - Exécution complète des 6 étapes de tests avant toute publication.
-3. **Multi-Tagging Automatique sur Docker Hub** :
-   - `latest` : Image de référence par défaut.
-   - `api37` : Tag d'alias pour la cible Android 17 / API 37.
-   - `gradle9` : Tag d'alias pour la stack Gradle 9.x.
-   - `v1.0.0`, `v1.0`, `v1` : Versions sémantiques basées sur vos tags Git (`v*.*.*`).
-   - `sha-xxxxxxx` : Hash court du commit Git pour une traçabilité immuable.
+1. **Job `lint`** :
+   - Exécution simultanée de Hadolint, ShellCheck et Actionlint.
+2. **Job `test`** :
+   - Cache de build GitHub Actions (`cache-from: type=gha`, `cache-to: type=gha,mode=max`) accélérant les constructions d'image à 2 minutes.
+   - Scan de Sécurité Automatisé **Trivy** (`aquasecurity/trivy-action`) avec rapport SARIF dans l'onglet **Security** de GitHub et règle bloquante `zero-unfixed-critical`.
+   - Exécution de la suite de 7 tests en mode Root.
+   - Test de sécurité sous utilisateur non-root durci (`--user 1000:0`).
+   - Test de sécurité sous UID arbitraire strict (`--user 1001:1001`).
+3. **Job `publish` (Multi-Arch & Multi-Tag)** :
+   - Construction multi-architecture native `linux/amd64` et `linux/arm64` via QEMU et Docker Buildx.
+   - Publication automatique sur Docker Hub :
+     - `latest` : Image de référence par défaut.
+     - `api37` : Tag d'alias pour la cible Android 17 / API 37.
+     - `gradle9` : Tag d'alias pour la stack Gradle 9.x.
+     - `v1.0.0`, `v1.0`, `v1` : Versions sémantiques basées sur vos tags Git (`v*.*.*`).
+     - `sha-xxxxxxx` : Hash court du commit Git pour une traçabilité immuable.
 
 ---
 

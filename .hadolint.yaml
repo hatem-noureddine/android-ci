@@ -1,0 +1,4 @@
+# Hadolint configuration for Android CI Box
+ignored:
+  - DL3008 # Pin versions in apt-get install (Ubuntu 24.04 repos update patch releases continuously)
+  - DL3028 # Pin versions in gem install (Fastlane is maintained to latest stable)

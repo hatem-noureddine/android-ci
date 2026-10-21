@@ -32,20 +32,21 @@ if command -v java >/dev/null 2>&1; then
 else
     echo -e "  Active Version  : ${RED}Java not found in PATH!${RESET}"
 fi
-echo -e "  Available JDKs  : $(ls -d /opt/jdk-* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')"
+AVAILABLE_JDKS=$(find /opt -maxdepth 1 -name "jdk-*" -exec basename {} + 2>/dev/null | tr '\n' ' ')
+echo -e "  Available JDKs  : ${AVAILABLE_JDKS:-None}"
 echo ""
 
 # 3. Android SDK Components
 echo -e "${BOLD}3. Android SDK Components${RESET}"
 echo -e "  ANDROID_HOME    : ${ANDROID_HOME:-Not set}"
 if [ -d "$ANDROID_HOME/platforms" ]; then
-    PLATFORMS=$(ls -d "$ANDROID_HOME/platforms"/* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')
+    PLATFORMS=$(find "$ANDROID_HOME/platforms" -mindepth 1 -maxdepth 1 -exec basename {} + 2>/dev/null | tr '\n' ' ')
     echo -e "  Platforms       : ${GREEN}${PLATFORMS}${RESET}"
 else
     echo -e "  Platforms       : ${RED}None installed${RESET}"
 fi
 if [ -d "$ANDROID_HOME/build-tools" ]; then
-    BUILD_TOOLS=$(ls -d "$ANDROID_HOME/build-tools"/* 2>/dev/null | xargs -n 1 basename | tr '\n' ' ')
+    BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -exec basename {} + 2>/dev/null | tr '\n' ' ')
     echo -e "  Build Tools     : ${GREEN}${BUILD_TOOLS}${RESET}"
 else
     echo -e "  Build Tools     : ${RED}None installed${RESET}"
@@ -86,7 +87,7 @@ else
 fi
 
 # Check CA Certificates
-CA_COUNT=$(ls /certificates/*.crt /certificates/*.pem /usr/local/share/ca-certificates/*.crt 2>/dev/null | wc -l)
+CA_COUNT=$(find /certificates /usr/local/share/ca-certificates -maxdepth 1 \( -name "*.crt" -o -name "*.pem" \) 2>/dev/null | wc -l)
 if [ "$CA_COUNT" -gt 0 ]; then
     echo -e "  Corporate CA    : ${GREEN}${CA_COUNT} custom certificate(s) detected and registered${RESET}"
 else

@@ -13,10 +13,40 @@ env:
 
 jobs:
   # ============================================================================
-  # Job 1: Build, Security Scan (Trivy) & Run Comprehensive Test Suite
+  # Job 1: Static Analysis & Code Quality Linters
+  # ============================================================================
+  lint:
+    name: Linters & Static Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint (Dockerfile Linter)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
+
+      - name: Run ShellCheck (Shell Scripts Linter)
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+          ignore_paths: >-
+            test_projects
+
+      - name: Run Actionlint (GitHub Workflows Linter)
+        uses: raven-actions/actionlint@v2
+
+  # ============================================================================
+  # Job 2: Build, Security Scan (Trivy) & Run Comprehensive Test Suite
   # ============================================================================
   test:
     name: Build, Security Scan & Test Suite
+    needs: lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,6 +60,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build local test image
+        id: build_image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -49,8 +80,8 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy Results to GitHub Security Tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -81,9 +112,18 @@ jobs:
             ${{ env.IMAGE_NAME }}:test \
             ci-doctor
 
+      - name: Test Arbitrary UID Execution (UID 1001:1001)
+        run: |
+          docker run --rm \
+            --user 1001:1001 \
+            -v "${{ github.workspace }}":/project \
+            -w /project \
+            ${{ env.IMAGE_NAME }}:test \
+            ci-doctor
+
   # ============================================================================
-  # Job 2: Multi-Arch Build & Automated Multi-Tag Release to Docker Hub
-  # Only executes if all tests & security scans pass!
+  # Job 3: Multi-Arch Build & Automated Multi-Tag Release to Docker Hub
+  # Only executes if all linters, tests & security scans pass!
   # ============================================================================
   publish:
     name: Publish Multi-Arch Image to Docker Hub
@@ -100,12 +140,15 @@ jobs:
 
       - name: Check Docker Hub Credentials Availability
         id: check_creds
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "has_creds=true" >> $GITHUB_OUTPUT
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
             echo "Docker Hub credentials detected."
           else
-            echo "has_creds=false" >> $GITHUB_OUTPUT
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
             echo "::warning ::Docker Hub secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) are not configured. Skipping image push."
           fi
 

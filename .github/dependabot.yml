@@ -1,15 +1,10 @@
-# GitHub's Dependabot Config
-
 version: 2
 updates:
-
-  # Set update schedule for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      # Check for updates to GitHub Actions every month
-      interval: "monthly"
-    commit-message:
-      # Prefix all commit messages with "CI: "
-      prefix: "CI: "
-      include: "scope"
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"

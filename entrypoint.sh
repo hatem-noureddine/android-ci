@@ -79,7 +79,7 @@ fi
 # ------------------------------------------------------------------------------
 RAW_PROXY="${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}"
 if [ -n "$RAW_PROXY" ] && [ -w "$GRADLE_PROP_FILE" ]; then
-    CLEAN_PROXY=$(echo "$RAW_PROXY" | sed -e 's|^[^/]*//||')
+    CLEAN_PROXY="${RAW_PROXY#*://}"
     PROXY_HOST=$(echo "$CLEAN_PROXY" | cut -d: -f1)
     PROXY_PORT=$(echo "$CLEAN_PROXY" | cut -d: -f2 | cut -d/ -f1)
     NON_PROXY="${NO_PROXY:-${no_proxy:-"localhost,127.0.0.1"}}"

@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+case "${1:-}" in
+  17)
+    export JAVA_HOME="/opt/jdk-17"
+    ln -snf /opt/jdk-17 /opt/default-jdk
+    echo "Switched to JDK 17 ($JAVA_HOME)"
+    ;;
+  21)
+    export JAVA_HOME="/opt/jdk-21"
+    ln -snf /opt/jdk-21 /opt/default-jdk
+    echo "Switched to JDK 21 ($JAVA_HOME)"
+    ;;
+  *)
+    echo "Usage: switch-jdk [17|21]"
+    exit 1
+    ;;
+esac

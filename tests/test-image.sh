@@ -1,9 +1,8 @@
 #!/bin/bash
-set -eo pipefail
+set -euo pipefail
 
 BOLD="\033[1m"
 GREEN="\033[0;32m"
-YELLOW="\033[0;33m"
 CYAN="\033[0;36m"
 RED="\033[0;31m"
 RESET="\033[0m"
@@ -15,14 +14,14 @@ echo -e "${BOLD}${CYAN}=========================================================
 # ------------------------------------------------------------------------------
 # Test 1: Run CI Doctor
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 1/6] Running ci-doctor verification...${RESET}"
+echo -e "${BOLD}[Test 1/7] Running ci-doctor verification...${RESET}"
 ci-doctor
 echo -e "${GREEN}✔ ci-doctor passed successfully!${RESET}\n"
 
 # ------------------------------------------------------------------------------
 # Test 2: Dual JDK Switching
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 2/6] Testing JDK switching (17 vs 21)...${RESET}"
+echo -e "${BOLD}[Test 2/7] Testing JDK switching (17 vs 21)...${RESET}"
 switch-jdk 17
 JAVA_17_VER=$(java -version 2>&1 | head -n 1)
 echo "Active Java: $JAVA_17_VER"
@@ -43,7 +42,7 @@ echo -e "${GREEN}✔ JDK switching passed!${RESET}\n"
 # ------------------------------------------------------------------------------
 # Test 3: Android SDK Components Verification
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 3/6] Verifying Android SDK platforms & build-tools...${RESET}"
+echo -e "${BOLD}[Test 3/7] Verifying Android SDK platforms & build-tools...${RESET}"
 for api in 35 36 37; do
     if [ -d "$ANDROID_HOME/platforms/android-$api" ]; then
         echo -e "  Found platform: ${GREEN}android-$api${RESET}"
@@ -66,7 +65,7 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # ------------------------------------------------------------------------------
 # Test 4: Tooling Executables Verification
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 4/6] Verifying CLI tools (gradle, bundletool, fastlane, python, gh)...${RESET}"
+echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, bundletool, fastlane, python, gh)...${RESET}"
 gradle --version | head -n 3
 bundletool version
 fastlane --version | head -n 1
@@ -76,14 +75,53 @@ gh --version | head -n 1
 echo -e "${GREEN}✔ All CLI tools verified!${RESET}\n"
 
 # ------------------------------------------------------------------------------
-# Test 5: Real Android Compilation (SampleProject)
+# Test 5: Enterprise Network & Entrypoint Simulation
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 5/6] Building real Android project (SampleProject)...${RESET}"
+echo -e "${BOLD}[Test 5/7] Testing enterprise auto-detection (Proxy, CA & Nexus)...${RESET}"
+TEST_GRADLE_DIR="/tmp/test_gradle_home"
+mkdir -p "$TEST_GRADLE_DIR"
+GRADLE_USER_HOME="$TEST_GRADLE_DIR" \
+HTTP_PROXY="http://proxy.test.internal:8080" \
+NO_PROXY="localhost,127.0.0.1,test.internal" \
+NEXUS_BASE_URL="https://nexus.test.internal/repository" \
+GRADLE_BUILD_CACHE_URL="https://cache.test.internal/cache/" \
+/entrypoint.sh echo "Entrypoint test executed successfully"
+
+if grep -q "proxyHost=proxy.test.internal" "$TEST_GRADLE_DIR/gradle.properties" && \
+   grep -q "proxyPort=8080" "$TEST_GRADLE_DIR/gradle.properties" && \
+   grep -q "nonProxyHosts=localhost|127.0.0.1|test.internal" "$TEST_GRADLE_DIR/gradle.properties"; then
+    echo -e "${GREEN}✔ Corporate proxy settings injected into gradle.properties successfully!${RESET}"
+else
+    echo -e "${RED}✘ Proxy settings missing or malformed in gradle.properties!${RESET}"
+    cat "$TEST_GRADLE_DIR/gradle.properties"
+    exit 1
+fi
+
+if [ -f "$TEST_GRADLE_DIR/init.d/nexus-mirror.gradle" ]; then
+    echo -e "${GREEN}✔ Nexus auto-derivation generated init.d/nexus-mirror.gradle!${RESET}"
+else
+    echo -e "${RED}✘ Nexus mirror init script missing!${RESET}"
+    exit 1
+fi
+
+if [ -f "$TEST_GRADLE_DIR/init.d/remote-cache.gradle" ]; then
+    echo -e "${GREEN}✔ Remote build cache init script generated successfully!${RESET}"
+else
+    echo -e "${RED}✘ Remote build cache script missing!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_GRADLE_DIR"
+echo -e "${GREEN}✔ Enterprise network integration verified!${RESET}\n"
+
+# ------------------------------------------------------------------------------
+# Test 6: Real Android Compilation & Linters (SampleProject)
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}[Test 6/7] Building and linting real Android project (SampleProject)...${RESET}"
 cd /project/test_projects/SampleProject
 
 chmod +x gradlew
-echo "Running Gradle unit tests..."
-./gradlew test --no-daemon
+echo "Running Gradle unit tests and Android Lint..."
+./gradlew test lintRelease check --no-daemon
 
 echo "Running Gradle assembleRelease..."
 ./gradlew assembleRelease --no-daemon
@@ -95,15 +133,15 @@ else
     echo -e "${RED}✘ Release APK not found!${RESET}"
     exit 1
 fi
-echo -e "${GREEN}✔ Android compilation test passed!${RESET}\n"
+echo -e "${GREEN}✔ Android compilation & lint test passed!${RESET}\n"
 
 # ------------------------------------------------------------------------------
-# Test 6: Fastlane Test Lane Execution
+# Test 7: Fastlane Test Lane Execution
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 6/6] Executing Fastlane test lane...${RESET}"
+echo -e "${BOLD}[Test 7/7] Executing Fastlane test lane...${RESET}"
 bundle exec fastlane test
 echo -e "${GREEN}✔ Fastlane test lane executed successfully!${RESET}\n"
 
 echo -e "\n${BOLD}${GREEN}================================================================${RESET}"
-echo -e "${BOLD}${GREEN}   ✔ ALL 6 TESTS PASSED SUCCESSFULLY! THE IMAGE IS CERTIFIED.   ${RESET}"
+echo -e "${BOLD}${GREEN}   ✔ ALL 7 TESTS PASSED SUCCESSFULLY! THE IMAGE IS CERTIFIED.   ${RESET}"
 echo -e "${BOLD}${GREEN}================================================================${RESET}\n"
