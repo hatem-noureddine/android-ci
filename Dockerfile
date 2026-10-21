@@ -40,6 +40,15 @@ RUN apt-get update -qq && \
         git \
         git-lfs \
         gnupg \
+        libasound2t64 \
+        libglu1-mesa \
+        libnss3 \
+        libpulse0 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxi6 \
+        libxrandr2 \
+        libxtst6 \
         locales \
         openjdk-17-jdk-headless \
         openjdk-21-jdk-headless \
@@ -96,16 +105,17 @@ RUN mkdir -p /opt/gradle && \
     ln -s "/opt/gradle/gradle-${GRADLE_VERSION}/bin/gradle" /usr/local/bin/gradle && \
     rm -f /tmp/gradle.zip
 
-# Configure default JAVA_HOME and PATH (including Gradle and Android tools)
+# Configure default JAVA_HOME, ANDROID_AVD_HOME and PATH (including Gradle and Android tools)
 ENV JAVA_HOME="/opt/default-jdk"
-ENV PATH="${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+ENV ANDROID_AVD_HOME="/home/runner/.android/avd"
+ENV PATH="${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
 
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
 RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version
 
-# Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + build-tools)
+# Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip" -o /tmp/cmdline-tools.zip && \
     unzip -q /tmp/cmdline-tools.zip -d "${ANDROID_HOME}/cmdline-tools" && \
@@ -116,6 +126,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo y; done | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true && \
     "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
         "platform-tools" \
+        "emulator" \
         "platforms;android-35" \
         "platforms;android-36" \
         "platforms;android-37.0" \
@@ -127,7 +138,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
-    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle && \
+    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle /home/runner/.android/avd && \
     chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
     find /opt -name "cacerts" -exec chmod 666 {} +
 

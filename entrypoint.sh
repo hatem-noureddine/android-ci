@@ -25,6 +25,11 @@ org.gradle.parallel=true
 org.gradle.caching=true
 org.gradle.vfs.watch=false
 org.gradle.jvmargs=${GRADLE_JVMARGS:--Xmx4g -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+TieredCompilation -Dfile.encoding=UTF-8}
+
+# Gradle Managed Devices (GMD) Headless & CI Automation
+android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+android.testoptions.manageddevices.emulator.showKernelLogging=true
+android.experimental.testoptions.manageddevices.maxconcurrentdevices=1
 EOF
 fi
 
@@ -202,11 +207,15 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Workspaces Permissions Compatibility
+# 6. Android Emulator, KVM & Workspaces Permissions Compatibility
 # ------------------------------------------------------------------------------
-mkdir -p /builds /project /certificates 2>/dev/null || true
+AVD_DIR="${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
+mkdir -p /builds /project /certificates "$AVD_DIR" 2>/dev/null || true
 chmod 777 /builds /project /certificates 2>/dev/null || true
-chmod -R 777 "$GRADLE_DIR" 2>/dev/null || true
+chmod -R 777 "$GRADLE_DIR" "$AVD_DIR" 2>/dev/null || true
+if [ -e /dev/kvm ] && [ "$(id -u)" -eq 0 ]; then
+    chmod 666 /dev/kvm 2>/dev/null || true
+fi
 
 # Execute CMD / CI command
 exec "$@"

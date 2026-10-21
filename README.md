@@ -382,6 +382,92 @@ L'image applique un ensemble d'optimisations coordonnées pour maximiser le déb
 
 ---
 
+## 📱 Tests d'Instrumentation Automatisés : Gradle Managed Devices (GMD)
+
+L'image `hateum/android-ci-box` supporte nativement **Gradle Managed Devices (GMD)** introduit par Google dans l'Android Gradle Plugin.
+
+### 🌟 Avantages de l'approche intégrée
+1. **Zéro intervention manuelle** : Plus besoin de scripts complexes de boot d'émulateur (`adb wait-for-device`, sleep, kill). AGP provisionne, démarre en headless, exécute les tests Espresso/UI Automator, génère les rapports et éteint automatiquement l'émulateur.
+2. **Accélération graphique headless pré-configurée** : L'entrypoint injecte d'office `android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect` dans `gradle.properties`, éliminant les crashs d'affichage sur les runners CI sans GPU physique.
+3. **Limitation de concurrence CI** : `maxconcurrentdevices=1` est configuré pour protéger les runners contre les Out-Of-Memory (OOM).
+4. **Support Matériel KVM & Tolérance** : Si `/dev/kvm` est monté, l'accélération matérielle est exploitée ; s'il est absent, le fallback logiciel fonctionne automatiquement.
+
+---
+
+### 🛠️ Configuration dans votre projet Android (`app/build.gradle` ou `build.gradle.kts`)
+
+Déclarez simplement vos profils d'émulateurs standards et pliables :
+
+```groovy
+android {
+    testOptions {
+        animationsDisabled = true // Désactive les animations pour accélérer les tests
+        managedDevices {
+            allDevices {
+                // Smartphone standard ultra-rapide (image Google ATD)
+                pixel8api35(com.android.build.api.dsl.ManagedVirtualDevice) {
+                    device = "Pixel 8"
+                    apiLevel = 35
+                    systemImageSource = "google-atd"
+                }
+                // Écran pliable (Foldable 7.6 pouces)
+                foldableApi36(com.android.build.api.dsl.ManagedVirtualDevice) {
+                    device = "7.6in Foldable"
+                    apiLevel = 36
+                    systemImageSource = "google"
+                }
+            }
+            groups {
+                allFormFactors {
+                    targetDevices.add(allDevices.pixel8api35)
+                    targetDevices.add(allDevices.foldableApi36)
+                }
+            }
+        }
+    }
+}
+```
+
+---
+
+### 🚀 Exécution des Tests d'Instrumentation en CI
+
+Lancez directement les tâches générées automatiquement par Gradle :
+
+```bash
+# Tester sur le smartphone standard Pixel 8 (Android 15)
+docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
+  ./gradlew pixel8api35DebugAndroidTest
+
+# Tester sur l'écran pliable Foldable (Android 16)
+docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
+  ./gradlew foldableApi36DebugAndroidTest
+
+# Tester simultanément sur l'ensemble du groupe de terminaux
+docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
+  ./gradlew allFormFactorsGroupDebugAndroidTest
+```
+
+---
+
+### 💾 Mise en Cache Recommandée en CI (GitHub Actions)
+
+Pour éviter de retélécharger l'image système Android à chaque exécution du job CI, mettez en cache les répertoires d'AVD et d'images système :
+
+```yaml
+- name: Cache Android Emulators & System Images
+  uses: actions/cache@v4
+  with:
+    path: |
+      /opt/android-sdk/system-images
+      /home/runner/.android/avd
+    key: ${{ runner.os }}-android-emulator-${{ hashFiles('**/build.gradle*') }}
+    restore-keys: |
+      ${{ runner.os }}-android-emulator-
+```
+
+---
+
 ## ❓ FAQ & Dépannage Rapide
 
 ### 1. Comment résoudre l'erreur SSL `PKIX path building failed` ?

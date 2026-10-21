@@ -116,10 +116,28 @@ if [ -n "$CACHE_VAL" ]; then
 else
     echo -e "  Build Cache HTTP: ${CYAN}Local cache only (No remote HTTP build cache)${RESET}"
 fi
+# 6. Android Emulator & KVM Acceleration
+echo -e "${BOLD}6. Android Emulator & KVM Hardware Acceleration${RESET}"
+if command -v emulator >/dev/null 2>&1; then
+    EMU_VERSION=$(emulator -version 2>&1 | head -n 1)
+    echo -e "  Android Emulator: ${GREEN}${EMU_VERSION:-Active}${RESET}"
+else
+    echo -e "  Android Emulator: ${YELLOW}Not in PATH or not installed${RESET}"
+fi
+echo -e "  AVD Directory   : ${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
+if [ -e /dev/kvm ]; then
+    if [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
+        echo -e "  KVM Acceleration: ${GREEN}Available & R/W accessible (/dev/kvm)${RESET}"
+    else
+        echo -e "  KVM Acceleration: ${YELLOW}Present but check permissions (/dev/kvm)${RESET}"
+    fi
+else
+    echo -e "  KVM Acceleration: ${YELLOW}Absent (Fallback: Software emulation swiftshader_indirect)${RESET}"
+fi
 echo ""
 
-# 6. Connectivity Quick-Check
-echo -e "${BOLD}6. Connectivity Probes${RESET}"
+# 7. Connectivity Quick-Check
+echo -e "${BOLD}7. Connectivity Probes${RESET}"
 test_url() {
     local target="$1"
     local name="$2"

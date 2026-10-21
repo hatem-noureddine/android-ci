@@ -65,8 +65,9 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # ------------------------------------------------------------------------------
 # Test 4: Tooling Executables Verification
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, bundletool, fastlane, python, gh)...${RESET}"
+echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, emulator, bundletool, fastlane, python, gh)...${RESET}"
 gradle --version
+emulator -version | head -n 1
 bundletool version
 fastlane --version
 python3 --version
@@ -112,6 +113,14 @@ else
     ls -la "$TEST_GRADLE_DIR/init.d" || true
     exit 1
 fi
+
+if grep -q "android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect" "$TEST_GRADLE_DIR/gradle.properties"; then
+    echo -e "${GREEN}✔ Gradle Managed Devices (GMD) headless options injected successfully!${RESET}"
+else
+    echo -e "${RED}✘ GMD headless options missing in gradle.properties!${RESET}"
+    exit 1
+fi
+
 rm -rf "$TEST_GRADLE_DIR"
 echo -e "${GREEN}✔ Enterprise network integration verified!${RESET}\n"
 
@@ -135,7 +144,18 @@ else
     echo -e "${RED}✘ Release APK not found!${RESET}"
     exit 1
 fi
-echo -e "${GREEN}✔ Android compilation & lint test passed!${RESET}\n"
+
+echo "Running Gradle assembleDebugAndroidTest (Instrumentation test APK with GMD support)..."
+./gradlew assembleDebugAndroidTest --no-daemon
+
+if [ -f "app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" ]; then
+    echo -e "${GREEN}✔ Instrumentation test APK successfully generated:${RESET}"
+    ls -lh app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+else
+    echo -e "${RED}✘ Instrumentation test APK not found!${RESET}"
+    exit 1
+fi
+echo -e "${GREEN}✔ Android compilation, lint & instrumentation build test passed!${RESET}\n"
 
 # ------------------------------------------------------------------------------
 # Test 7: Fastlane Test Lane Execution

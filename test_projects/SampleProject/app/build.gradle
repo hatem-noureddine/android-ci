@@ -27,6 +27,30 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    testOptions {
+        animationsDisabled = true
+        managedDevices {
+            allDevices {
+                pixel8api35(com.android.build.api.dsl.ManagedVirtualDevice) {
+                    device = "Pixel 8"
+                    apiLevel = 35
+                    systemImageSource = "google-atd"
+                }
+                foldableApi36(com.android.build.api.dsl.ManagedVirtualDevice) {
+                    device = "7.6in Foldable"
+                    apiLevel = 36
+                    systemImageSource = "google"
+                }
+            }
+            groups {
+                phoneAndFoldable {
+                    targetDevices.add(allDevices.pixel8api35)
+                    targetDevices.add(allDevices.foldableApi36)
+                }
+            }
+        }
+    }
 }
 
 dependencies {
