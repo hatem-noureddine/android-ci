@@ -361,9 +361,9 @@ Le pipeline GitHub Actions ([`.github/workflows/docker-publish.yml`](.github/wor
    - Construction multi-architecture native `linux/amd64` et `linux/arm64` via QEMU et Docker Buildx.
    - Publication automatique sur Docker Hub :
      - `latest` : Image de référence par défaut.
-     - `api37` : Tag d'alias pour la cible Android 17 / API 37.
-     - `gradle9` : Tag d'alias pour la stack Gradle 9.x.
-     - `v1.0.0`, `v1.0`, `v1` : Versions sémantiques basées sur vos tags Git (`v*.*.*`).
+     - `1.0.0` : Numéro de version sémantique exact (piloté par le fichier `VERSION`).
+     - `1.0` : Alias de version mineure (mis à jour automatiquement).
+     - `1` : Alias de version majeure (mis à jour automatiquement).
      - `sha-xxxxxxx` : Hash court du commit Git pour une traçabilité immuable.
 
 ---

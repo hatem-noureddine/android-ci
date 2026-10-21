@@ -145,7 +145,9 @@ WORKDIR /project
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD ["ci-doctor", "--summary"]
 
 # OCI Standard Image Metadata Labels
+ARG VERSION="1.0.0"
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
+      org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
