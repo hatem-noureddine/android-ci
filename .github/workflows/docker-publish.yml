@@ -30,6 +30,7 @@ jobs:
         with:
           dockerfile: Dockerfile
           config: .hadolint.yaml
+          failure-threshold: error
 
       - name: Run ShellCheck (Shell Scripts Linter)
         uses: ludeeus/action-shellcheck@master

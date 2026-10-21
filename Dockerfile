@@ -125,10 +125,9 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
-    mkdir -p /builds /project /certificates && \
-    chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates && \
-    find /opt -name "cacerts" -exec chmod 666 {} + 2>/dev/null || true && \
-    chmod -R 777 /usr/local/share/ca-certificates 2>/dev/null || true
+    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates && \
+    chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
+    find /opt -name "cacerts" -exec chmod 666 {} +
 
 # Copy and install utilities
 COPY ci-doctor /usr/local/bin/ci-doctor
