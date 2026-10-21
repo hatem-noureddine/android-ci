@@ -71,7 +71,7 @@ RUN apt-get update -qq && \
     ln -s /opt/jdk-21 /opt/default-jdk && \
     apt-get clean && \
     apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /usr/share/man /usr/share/doc /usr/share/info
 
 # Layer 2: Install GitHub CLI (gh)
 RUN mkdir -p /etc/apt/keyrings && \
@@ -106,13 +106,15 @@ COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
 RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + build-tools)
-RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" && \
+RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     curl -fsSL "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS_VERSION}_latest.zip" -o /tmp/cmdline-tools.zip && \
     unzip -q /tmp/cmdline-tools.zip -d "${ANDROID_HOME}/cmdline-tools" && \
     mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest" && \
     rm -f /tmp/cmdline-tools.zip && \
-    yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses && \
-    yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+    printf "8937372298270f79dd511e7c739bc7a53929e002\n24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e\n" > "${ANDROID_HOME}/licenses/android-sdk-license" && \
+    printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "${ANDROID_HOME}/licenses/android-sdk-preview-license" && \
+    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo y; done | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true && \
+    "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
         "platform-tools" \
         "platforms;android-35" \
         "platforms;android-36" \
@@ -125,7 +127,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
-    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates && \
+    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle && \
     chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
     find /opt -name "cacerts" -exec chmod 666 {} +
 

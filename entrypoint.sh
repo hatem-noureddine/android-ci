@@ -24,7 +24,7 @@ org.gradle.daemon=false
 org.gradle.parallel=true
 org.gradle.caching=true
 org.gradle.vfs.watch=false
-org.gradle.jvmargs=${GRADLE_JVMARGS:--Xmx4g -XX:+UseG1GC -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8}
+org.gradle.jvmargs=${GRADLE_JVMARGS:--Xmx4g -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+TieredCompilation -Dfile.encoding=UTF-8}
 EOF
 fi
 

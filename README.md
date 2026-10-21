@@ -368,6 +368,20 @@ Le pipeline GitHub Actions ([`.github/workflows/docker-publish.yml`](.github/wor
 
 ---
 
+## ⚡ Architecture de Performance 360°
+
+L'image applique un ensemble d'optimisations coordonnées pour maximiser le débit des builds CI :
+
+| Axe d'Optimisation | Mécanisme Implémenté | Bénéfice CI / Développeur |
+| :--- | :--- | :--- |
+| **Moteur JVM & GC** | OpenJDK 21 + Garbage Collector `G1GC` + `-XX:+ParallelRefProcEnabled` + JIT C2 complet | Réduction des temps de pause GC et compilation Kotlin / R8 jusqu'à **2x plus rapide**. |
+| **Ordonnancement Gradle** | `org.gradle.parallel=true`, `org.gradle.caching=true`, `org.gradle.vfs.watch=false` | Parallélisation maximale des tâches sur les CPUs du runner et réutilisation des outputs. |
+| **Slimming de l'Image** | Purge des documentations (`/usr/share/doc`, `/usr/share/man`), caches APT et gems | Temps de `docker pull` minimal sur les runners Kubernetes et GitLab. |
+| **Stabilité & Anti-SIGPIPE** | Licences Android pré-calculées et injection POSIX sans blocage de pipe | Élimination des erreurs `exit code 141` sur shells stricts avec `pipefail`. |
+| **Cache de Build Distant** | Support natif de `GRADLE_BUILD_CACHE_URL` dans `init.d` | Partage instantané des artefacts de compilation entre tous les jobs de l'entreprise. |
+
+---
+
 ## ❓ FAQ & Dépannage Rapide
 
 ### 1. Comment résoudre l'erreur SSL `PKIX path building failed` ?

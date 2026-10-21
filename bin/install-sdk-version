@@ -11,21 +11,21 @@ fi
 
 SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
 
-# Pre-accept licenses
-yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+# Pre-accept licenses safely without pipefail SIGPIPE
+printf 'y\n%.0s' {1..30} | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
 
 if [[ "$TARGET" =~ ^[0-9]+$ ]]; then
   echo "Installing Android platform $TARGET..."
   if [ "$TARGET" = "37" ]; then
-    yes | "$SDKMANAGER" "platforms;android-37.0" "build-tools;37.0.0" || yes | "$SDKMANAGER" "platforms;android-37.0"
+    "$SDKMANAGER" "platforms;android-37.0" "build-tools;37.0.0" || "$SDKMANAGER" "platforms;android-37.0"
     if [ -d "${ANDROID_HOME}/platforms/android-37.0" ] && [ ! -d "${ANDROID_HOME}/platforms/android-37" ]; then
       ln -snf "${ANDROID_HOME}/platforms/android-37.0" "${ANDROID_HOME}/platforms/android-37"
     fi
   else
-    yes | "$SDKMANAGER" "platforms;android-${TARGET}" "build-tools;${TARGET}.0.0" || yes | "$SDKMANAGER" "platforms;android-${TARGET}"
+    "$SDKMANAGER" "platforms;android-${TARGET}" "build-tools;${TARGET}.0.0" || "$SDKMANAGER" "platforms;android-${TARGET}"
   fi
 else
-  yes | "$SDKMANAGER" "$TARGET"
+  "$SDKMANAGER" "$TARGET"
 fi
 
 echo "Finished installing $TARGET"

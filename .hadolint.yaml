@@ -3,3 +3,4 @@ ignored:
   - DL3008 # Pin versions in apt-get install (Ubuntu 24.04 repos update patch releases continuously)
   - DL3028 # Pin versions in gem install (Fastlane is maintained to latest stable)
   - SC2015 # Allow standard shell chain idioms
+  - SC3009 # Allow bash extensions if detected by POSIX sh parser
