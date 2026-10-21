@@ -10,6 +10,9 @@ triggers:
   - "gradle managed devices"
   - "ci-doctor"
   - "fastlane android"
+  - "gitlab ci android"
+  - "gitlab runner kvm"
+  - "configure gitlab ci"
 ---
 
 # Android CI/CD Box AI Agent Skill
@@ -181,6 +184,53 @@ bundletool build-apks \
 
 ---
 
+### Step 8: GitLab CI/CD Pipeline & Runner Setup
+
+When onboarding an Android repository to GitLab CI/CD, generate a `.gitlab-ci.yml` that leverages container caching and rootless execution:
+
+```yaml
+default:
+  image: hateum/android-ci-box:latest
+  before_script:
+    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
+    - chmod +x ./gradlew
+  cache:
+    key:
+      files:
+        - gradle/wrapper/gradle-wrapper.properties
+        - "**/*.gradle*"
+    paths:
+      - .gradle/wrapper/
+      - .gradle/caches/
+
+test_and_lint:
+  stage: test
+  script:
+    - ./gradlew lintRelease testReleaseUnitTest check --no-daemon
+  artifacts:
+    reports:
+      junit: app/build/test-results/testReleaseUnitTest/*.xml
+
+instrumented_gmd_tests:
+  stage: test
+  tags:
+    - kvm
+  script:
+    - ./gradlew pixel8api35DebugAndroidTest --no-daemon
+```
+
+#### GitLab Runner `config.toml` (KVM Passthrough):
+```toml
+[runners.docker]
+  image = "hateum/android-ci-box:latest"
+  privileged = false
+  devices = ["/dev/kvm"]
+  volumes = ["/cache", "/dev/kvm:/dev/kvm:rw"]
+  shm_size = 2147483648 # 2GB prevents headless emulator UI crashes
+```
+
+---
+
 ## 3. Agent Troubleshooting Guidelines
 
 | Symptom | Probable Cause | Action |
@@ -189,4 +239,22 @@ bundletool build-apks \
 | `PKIX path building failed` | SSL inspection on corporate network | Mount CA certificate in `/certificates/corp.crt` |
 | `compileSdk = 37 unsupported` | Outdated AGP version | Upgrade AGP to `9.4.1` or set `android.suppressUnsupportedCompileSdk=37` |
 | Emulator crashes on launch | Missing KVM or headless GPU flag | Ensure `--device /dev/kvm` is passed and `swiftshader_indirect` is set |
+| `Cannot open /dev/kvm: Permission denied` | Host runner permissions restrict `/dev/kvm` | Run `sudo chmod 666 /dev/kvm` on runner host or add runner user to `kvm` group |
 | `exit code 141` in CI scripts | Broken pipe under `set -e -o pipefail` | Avoid piping commands like `fastlane --version \| head -n 1` |
+| Gradle Cache misses in GitLab CI | `GRADLE_USER_HOME` outside project dir | Export `GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"` in `before_script` |
+
+---
+
+## 4. Deep-Dive References & Standards
+
+For detailed operational guides, see the specialized references in this skill:
+- **GitLab CI/CD Guide**: [`references/gitlab-ci.md`](references/gitlab-ci.md) (Complete `.gitlab-ci.yml`, Docker & Kubernetes Runner setups, caching patterns)
+- **GMD & Emulators**: [`references/gmd-emulators.md`](references/gmd-emulators.md) (DSL patterns, ATD images, foldable/tablet profiles, KVM constraints)
+- **Enterprise Networking**: [`references/enterprise-networking.md`](references/enterprise-networking.md) (Proxy routing, SSL truststore injection, internal mirrors)
+
+### External Official Documentation:
+- [Google Android CLI (`android`)](https://developer.android.com/tools/android)
+- [Gradle Managed Devices Documentation](https://developer.android.com/studio/test/gradle-managed-devices)
+- [GitLab CI/CD Docker Executor](https://docs.gitlab.com/runner/executors/docker.html)
+- [KubeVirt KVM Device Plugin for Kubernetes](https://github.com/kubevirt/device-plugin-kvm)
+
