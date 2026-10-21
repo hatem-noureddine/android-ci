@@ -98,7 +98,7 @@ fi
 # ------------------------------------------------------------------------------
 # 4. Enterprise Nexus / Artifactory Multi-Repository & Auto-Derivation Engine
 # ------------------------------------------------------------------------------
-ALL_NEXUS_INPUT="${NEXUS_URLS:-${NEXUS_URL:-${INTERNAL_MAVEN_URL:-${ARTIFACTORY_URL:-${MAVEN_REPO_URL:-}}}}}"
+ALL_NEXUS_INPUT="${NEXUS_URLS:-${NEXUS_URL:-${NEXUS_BASE_URL:-${INTERNAL_MAVEN_URL:-${ARTIFACTORY_URL:-${MAVEN_REPO_URL:-}}}}}}"
 
 if [ -n "$ALL_NEXUS_INPUT" ] && [ -d "$GRADLE_DIR/init.d" ]; then
     CLEAN_INPUT=$(echo "$ALL_NEXUS_INPUT" | tr ',' ' ')

@@ -97,17 +97,19 @@ else
     exit 1
 fi
 
-if [ -f "$TEST_GRADLE_DIR/init.d/nexus-mirror.gradle" ]; then
-    echo -e "${GREEN}✔ Nexus auto-derivation generated init.d/nexus-mirror.gradle!${RESET}"
+if [ -f "$TEST_GRADLE_DIR/init.d/nexus-mirror.init.gradle" ]; then
+    echo -e "${GREEN}✔ Nexus auto-derivation generated init.d/nexus-mirror.init.gradle!${RESET}"
 else
     echo -e "${RED}✘ Nexus mirror init script missing!${RESET}"
+    ls -la "$TEST_GRADLE_DIR/init.d" || true
     exit 1
 fi
 
-if [ -f "$TEST_GRADLE_DIR/init.d/remote-cache.gradle" ]; then
+if [ -f "$TEST_GRADLE_DIR/init.d/remote-build-cache.init.gradle" ]; then
     echo -e "${GREEN}✔ Remote build cache init script generated successfully!${RESET}"
 else
     echo -e "${RED}✘ Remote build cache script missing!${RESET}"
+    ls -la "$TEST_GRADLE_DIR/init.d" || true
     exit 1
 fi
 rm -rf "$TEST_GRADLE_DIR"
