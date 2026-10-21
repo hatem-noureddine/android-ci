@@ -122,7 +122,12 @@ if command -v emulator >/dev/null 2>&1; then
     EMU_VERSION=$(emulator -version 2>&1 | head -n 1)
     echo -e "  Android Emulator: ${GREEN}${EMU_VERSION:-Active}${RESET}"
 else
-    echo -e "  Android Emulator: ${YELLOW}Not in PATH or not installed${RESET}"
+    ARCH_NAME=$(dpkg --print-architecture 2>/dev/null || uname -m)
+    if [ "$ARCH_NAME" = "arm64" ] || [ "$ARCH_NAME" = "aarch64" ]; then
+        echo -e "  Android Emulator: ${CYAN}x86_64 only (Google does not publish Linux ARM64 emulator; compilation & unit tests run at native ARM64 speed)${RESET}"
+    else
+        echo -e "  Android Emulator: ${YELLOW}Not in PATH or not installed${RESET}"
+    fi
 fi
 echo -e "  AVD Directory   : ${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
 if [ -e /dev/kvm ]; then

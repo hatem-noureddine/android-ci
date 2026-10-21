@@ -1,7 +1,7 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.1.0
+version: 1.2.0
 triggers:
   - "build android"
   - "run android tests"

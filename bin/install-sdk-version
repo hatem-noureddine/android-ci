@@ -9,23 +9,39 @@ if [ -z "$TARGET" ]; then
   exit 1
 fi
 
+ANDROID_CLI="${ANDROID_HOME}/cmdline-tools/latest/bin/android"
 SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
 
 # Pre-accept licenses safely without pipefail SIGPIPE
-printf 'y\n%.0s' {1..30} | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+if [ -x "$ANDROID_CLI" ]; then
+  printf 'y\n%.0s' {1..30} | "$ANDROID_CLI" sdk licenses >/dev/null 2>&1 || true
+else
+  printf 'y\n%.0s' {1..30} | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+fi
+
+install_package() {
+  local pkg="$1"
+  if [ -x "$ANDROID_CLI" ]; then
+    "$ANDROID_CLI" sdk install "$pkg" 2>/dev/null || "$SDKMANAGER" "$pkg"
+  else
+    "$SDKMANAGER" "$pkg"
+  fi
+}
 
 if [[ "$TARGET" =~ ^[0-9]+$ ]]; then
-  echo "Installing Android platform $TARGET..."
+  echo "Installing Android platform $TARGET via Android CLI / sdkmanager..."
   if [ "$TARGET" = "37" ]; then
-    "$SDKMANAGER" "platforms;android-37.0" "build-tools;37.0.0" || "$SDKMANAGER" "platforms;android-37.0"
+    install_package "platforms;android-37.0"
+    install_package "build-tools;37.0.0" || true
     if [ -d "${ANDROID_HOME}/platforms/android-37.0" ] && [ ! -d "${ANDROID_HOME}/platforms/android-37" ]; then
       ln -snf "${ANDROID_HOME}/platforms/android-37.0" "${ANDROID_HOME}/platforms/android-37"
     fi
   else
-    "$SDKMANAGER" "platforms;android-${TARGET}" "build-tools;${TARGET}.0.0" || "$SDKMANAGER" "platforms;android-${TARGET}"
+    install_package "platforms;android-${TARGET}"
+    install_package "build-tools;${TARGET}.0.0" || true
   fi
 else
-  "$SDKMANAGER" "$TARGET"
+  install_package "$TARGET"
 fi
 
 echo "Finished installing $TARGET"

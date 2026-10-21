@@ -1,6 +1,7 @@
 # Android CI/CD Build Box (`hateum/android-ci-box`)
 
 [![Docker Hub](https://img.shields.io/docker/pulls/hateum/android-ci-box?style=flat-square&logo=docker)](https://hub.docker.com/r/hateum/android-ci-box)
+[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fhateum-2088FF?style=flat-square&logo=github)](https://github.com/hatem-noureddine/android-ci/pkgs/container/android-ci)
 [![Docker Image Size](https://img.shields.io/docker/image-size/hateum/android-ci-box/latest?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Multi-Arch](https://img.shields.io/badge/architecture-amd64%20%7C%20arm64-blue?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Gradle Version](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
@@ -315,6 +316,9 @@ docker run --user 1000:0 hateum/android-ci-box:latest ...
 
 ### 3. How do I disable the Gradle Daemon?
 The image ships with `org.gradle.daemon=false` enabled by default to prevent zombie daemon processes from consuming RAM on shared runners.
+
+### 4. What is the status of the Android Emulator on ARM64 Linux runners?
+Google compiles and releases the official Android SDK Emulator binary (`emulator`) exclusively for `linux/x86_64`. On ARM64 Linux hosts (e.g. AWS Graviton, Ampere), Android application compilation, APK/AAB generation, Android Lint, unit tests, and Fastlane lanes run at native ARM64 silicon speed, but headless emulator testing via GMD requires an `x86_64` runner.
 
 ---
 
