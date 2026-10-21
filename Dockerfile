@@ -127,10 +127,11 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     rm -f /tmp/cmdline-tools.zip && \
     printf "8937372298270f79dd511e7c739bc7a53929e002\n24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e\n" > "${ANDROID_HOME}/licenses/android-sdk-license" && \
     printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "${ANDROID_HOME}/licenses/android-sdk-preview-license" && \
-    for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo y; done | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true && \
+    if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "emulator"; \
+    fi && \
     "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
         "platform-tools" \
-        "emulator" \
         "platforms;android-35" \
         "platforms;android-36" \
         "platforms;android-37.0" \
