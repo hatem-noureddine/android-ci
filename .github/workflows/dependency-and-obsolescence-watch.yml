@@ -1,0 +1,166 @@
+name: Upstream Obsolescence & Dependency Watchdog
+
+on:
+  schedule:
+    # Run every Monday at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-updates:
+    name: Check Upstream Updates & Obsolescence
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect Upstream Releases & Obsolescence
+        id: watchdog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # --- 1. Gradle Check ---
+          CURRENT_GRADLE=$(grep 'ENV GRADLE_VERSION=' Dockerfile | cut -d'"' -f2)
+          LATEST_GRADLE=$(curl -sSL "https://services.gradle.org/versions/current" | grep -o '"version":"[^"]*"' | head -n 1 | cut -d'"' -f4)
+          
+          GRADLE_UPDATE_NEEDED="false"
+          if [ "$CURRENT_GRADLE" != "$LATEST_GRADLE" ]; then
+            GRADLE_UPDATE_NEEDED="true"
+          fi
+
+          # --- 2. Bundletool Check ---
+          CURRENT_BUNDLETOOL=$(grep 'ENV BUNDLETOOL_VERSION=' Dockerfile | cut -d'"' -f2)
+          LATEST_BUNDLETOOL=$(curl -sSL "https://api.github.com/repos/google/bundletool/releases/latest" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 | sed 's/^v//')
+          
+          BUNDLETOOL_UPDATE_NEEDED="false"
+          if [ -n "$LATEST_BUNDLETOOL" ] && [ "$CURRENT_BUNDLETOOL" != "$LATEST_BUNDLETOOL" ]; then
+            BUNDLETOOL_UPDATE_NEEDED="true"
+          fi
+
+          # --- 3. Android Gradle Plugin (AGP) Check ---
+          CURRENT_AGP=$(grep 'com.android.tools.build:gradle:' test_projects/SampleProject/build.gradle | cut -d':' -f4 | tr -d '"')
+          LATEST_AGP=$(curl -sSL "https://dl.google.com/android/maven2/com/android/tools/build/gradle/maven-metadata.xml" | grep -o '<version>9\.[0-9]\+\.[0-9]\+</version>' | tail -n 1 | sed -e 's/<version>//' -e 's/<\/version>//')
+          
+          AGP_UPDATE_NEEDED="false"
+          if [ -n "$LATEST_AGP" ] && [ "$CURRENT_AGP" != "$LATEST_AGP" ]; then
+            AGP_UPDATE_NEEDED="true"
+          fi
+
+          # Export outputs
+          {
+            echo "current_gradle=${CURRENT_GRADLE}"
+            echo "latest_gradle=${LATEST_GRADLE}"
+            echo "gradle_update=${GRADLE_UPDATE_NEEDED}"
+            echo "current_bundletool=${CURRENT_BUNDLETOOL}"
+            echo "latest_bundletool=${LATEST_BUNDLETOOL}"
+            echo "bundletool_update=${BUNDLETOOL_UPDATE_NEEDED}"
+            echo "current_agp=${CURRENT_AGP}"
+            echo "latest_agp=${LATEST_AGP}"
+            echo "agp_update=${AGP_UPDATE_NEEDED}"
+          } >> "$GITHUB_OUTPUT"
+
+          ANY_UPDATE="false"
+          if [ "$GRADLE_UPDATE_NEEDED" = "true" ] || [ "$BUNDLETOOL_UPDATE_NEEDED" = "true" ] || [ "$AGP_UPDATE_NEEDED" = "true" ]; then
+            ANY_UPDATE="true"
+          fi
+          echo "any_update=${ANY_UPDATE}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Obsolescence Step Summary
+        run: |
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          # 🔍 Upstream Obsolescence & Dependency Watchdog Report
+
+          | Component | Installed in Box | Upstream Latest | Update Required? |
+          | :--- | :--- | :--- | :--- |
+          | **Gradle Engine** | \`${{ steps.watchdog.outputs.current_gradle }}\` | \`${{ steps.watchdog.outputs.latest_gradle }}\` | ${{ steps.watchdog.outputs.gradle_update == 'true' && '⚠️ **YES**' || '✅ Up to date' }} |
+          | **Android Gradle Plugin (AGP)** | \`${{ steps.watchdog.outputs.current_agp }}\` | \`${{ steps.watchdog.outputs.latest_agp }}\` | ${{ steps.watchdog.outputs.agp_update == 'true' && '⚠️ **YES**' || '✅ Up to date' }} |
+          | **Bundletool** | \`${{ steps.watchdog.outputs.current_bundletool }}\` | \`${{ steps.watchdog.outputs.latest_bundletool }}\` | ${{ steps.watchdog.outputs.bundletool_update == 'true' && '⚠️ **YES**' || '✅ Up to date' }} |
+
+          **Obsolescence Verdict**: ${{ steps.watchdog.outputs.any_update == 'true' && '⚠️ Updates are available.' || '✅ All core upstream components are up-to-date.' }}
+          EOF
+
+      - name: Create or Update GitHub Issue Alert
+        if: steps.watchdog.outputs.any_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE_TITLE="⚠️ [Obsolescence Watch] New Upstream Releases Available"
+          
+          # Check if open issue already exists
+          EXISTING_ISSUE=$(gh issue list --search "$ISSUE_TITLE in:title state:open" --json number --jq '.[0].number')
+
+          BODY=$(cat <<EOF
+          ## 🔍 Automated Obsolescence & Upstream Dependency Report
+
+          The weekly watchdog has identified newer releases of upstream core dependencies:
+
+          | Component | Container Current | Upstream Latest | Status |
+          | :--- | :--- | :--- | :--- |
+          | **Gradle** | \`${{ steps.watchdog.outputs.current_gradle }}\` | \`${{ steps.watchdog.outputs.latest_gradle }}\` | ${{ steps.watchdog.outputs.gradle_update == 'true' && '⚠️ Needs update' || '✅ Current' }} |
+          | **AGP** | \`${{ steps.watchdog.outputs.current_agp }}\` | \`${{ steps.watchdog.outputs.latest_agp }}\` | ${{ steps.watchdog.outputs.agp_update == 'true' && '⚠️ Needs update' || '✅ Current' }} |
+          | **Bundletool** | \`${{ steps.watchdog.outputs.current_bundletool }}\` | \`${{ steps.watchdog.outputs.latest_bundletool }}\` | ${{ steps.watchdog.outputs.bundletool_update == 'true' && '⚠️ Needs update' || '✅ Current' }} |
+
+          ### 🤖 Recommended Agent Action
+          To update these components:
+          1. Update versions in \`Dockerfile\` and \`test_projects/SampleProject/build.gradle\`.
+          2. Run local verification: \`tests/test-image.sh\`.
+          3. Bump \`VERSION\` in \`VERSION\` file.
+          4. Push to \`main\` to release the updated Docker image to Docker Hub and GHCR.
+          EOF
+          )
+
+          if [ -n "$EXISTING_ISSUE" ] && [ "$EXISTING_ISSUE" != "null" ]; then
+            echo "Updating existing issue #$EXISTING_ISSUE..."
+            gh issue edit "$EXISTING_ISSUE" --body "$BODY"
+          else
+            echo "Creating new GitHub Issue..."
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --body "$BODY" \
+              --label "dependencies"
+          fi
+
+      - name: Apply Updates Locally for Automated PR
+        if: steps.watchdog.outputs.any_update == 'true'
+        run: |
+          if [ "${{ steps.watchdog.outputs.gradle_update }}" = "true" ]; then
+            sed -i 's/ENV GRADLE_VERSION="${{ steps.watchdog.outputs.current_gradle }}"/ENV GRADLE_VERSION="${{ steps.watchdog.outputs.latest_gradle }}"/' Dockerfile
+          fi
+          if [ "${{ steps.watchdog.outputs.bundletool_update }}" = "true" ]; then
+            sed -i 's/ENV BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.current_bundletool }}"/ENV BUNDLETOOL_VERSION="${{ steps.watchdog.outputs.latest_bundletool }}"/' Dockerfile
+          fi
+          if [ "${{ steps.watchdog.outputs.agp_update }}" = "true" ]; then
+            sed -i 's/com.android.tools.build:gradle:${{ steps.watchdog.outputs.current_agp }}/com.android.tools.build:gradle:${{ steps.watchdog.outputs.latest_agp }}/' test_projects/SampleProject/build.gradle
+          fi
+
+      - name: Create Automated Update Pull Request
+        if: steps.watchdog.outputs.any_update == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(deps): update upstream Gradle, AGP, or Bundletool"
+          branch: "chore/upstream-dependency-updates"
+          delete-branch: true
+          title: "🤖 [Automated] Upstream Dependency Updates (Gradle / AGP / Bundletool)"
+          body: |
+            ## Automated Upstream Dependency Updates
+
+            This automated PR was generated by the **Upstream Obsolescence & Dependency Watchdog**.
+
+            ### Updated Versions:
+            - **Gradle**: `${{ steps.watchdog.outputs.current_gradle }}` ➔ `${{ steps.watchdog.outputs.latest_gradle }}`
+            - **AGP**: `${{ steps.watchdog.outputs.current_agp }}` ➔ `${{ steps.watchdog.outputs.latest_agp }}`
+            - **Bundletool**: `${{ steps.watchdog.outputs.current_bundletool }}` ➔ `${{ steps.watchdog.outputs.latest_bundletool }}`
+
+            Please review the changes and run the CI test suite before merging.
+          labels: |
+            dependencies
+            automated-pr

@@ -191,14 +191,19 @@ docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/androi
 
 ## 🤖 AI Agent Integration (Antigravity, Claude Code, GitHub Copilot)
 
-This repository includes a standardized **AI Agent Skill** located at:
-[`.agents/skills/android-ci-box/SKILL.md`](.agents/skills/android-ci-box/SKILL.md)
+This repository is engineered for autonomous AI coding agents:
+- **AI Agent Skill**: [`.agents/skills/android-ci-box/SKILL.md`](.agents/skills/android-ci-box/SKILL.md)
+- **Agent Governance & Architecture Context**: [`AGENTS.md`](AGENTS.md)
+- **Product Requirements Document (PRD)**: [`docs/PRD.md`](docs/PRD.md)
+- **Architecture Decision Records (ADRs)**: [`docs/adr/`](docs/adr/)
+- **Upstream Obsolescence & Dependency Watchdog**: [`.github/workflows/dependency-and-obsolescence-watch.yml`](.github/workflows/dependency-and-obsolescence-watch.yml)
 
 ### Supported Agent Workflows:
 - **Environment Assessment**: Autonomous invocation of `ci-doctor` to identify missing SDK packages or KVM capabilities.
 - **Automated JDK Switching**: Invocation of `switch-jdk 17` or `switch-jdk 21` when diagnosing bytecode compatibility issues.
 - **Headless Build & Lint Execution**: Running `./gradlew assembleRelease bundleRelease test lintRelease` with non-daemon, optimal memory settings.
 - **GMD Troubleshooting**: Automatically analyzing GMD failure logs and emulator kernel messages.
+- **Automated Obsolescence Alerting**: Weekly automated GitHub Issues and Pull Requests when newer Gradle, AGP, or Bundletool versions are released.
 
 To activate this skill in your AI assistant, point your agent to `.agents/skills/android-ci-box/SKILL.md`.
 
