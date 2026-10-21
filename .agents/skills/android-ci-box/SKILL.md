@@ -13,6 +13,10 @@ triggers:
   - "gitlab ci android"
   - "gitlab runner kvm"
   - "configure gitlab ci"
+  - "github actions android"
+  - "jenkins android"
+  - "bitbucket pipelines android"
+  - "circleci android"
 ---
 
 # Android CI/CD Box AI Agent Skill
@@ -184,10 +188,11 @@ bundletool build-apks \
 
 ---
 
-### Step 8: GitLab CI/CD Pipeline & Runner Setup
+### Step 8: Multi-Platform CI/CD Integration & Runner Setup
 
-When onboarding an Android repository to GitLab CI/CD, generate a `.gitlab-ci.yml` that leverages container caching and rootless execution:
+Ready-to-use pipeline configurations are available for all major CI/CD engines under [`examples/ci/`](../../../examples/ci/):
 
+#### A. GitLab CI/CD (`.gitlab-ci.yml`)
 ```yaml
 default:
   image: hateum/android-ci-box:latest
@@ -207,26 +212,36 @@ test_and_lint:
   stage: test
   script:
     - ./gradlew lintRelease testReleaseUnitTest check --no-daemon
-  artifacts:
-    reports:
-      junit: app/build/test-results/testReleaseUnitTest/*.xml
-
-instrumented_gmd_tests:
-  stage: test
-  tags:
-    - kvm
-  script:
-    - ./gradlew pixel8api35DebugAndroidTest --no-daemon
 ```
 
-#### GitLab Runner `config.toml` (KVM Passthrough):
-```toml
-[runners.docker]
-  image = "hateum/android-ci-box:latest"
-  privileged = false
-  devices = ["/dev/kvm"]
-  volumes = ["/cache", "/dev/kvm:/dev/kvm:rw"]
-  shm_size = 2147483648 # 2GB prevents headless emulator UI crashes
+#### B. GitHub Actions (`.github/workflows/android.yml`)
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: hateum/android-ci-box:latest
+      options: --user 1000:0
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
+```
+
+#### C. Jenkins (`Jenkinsfile`)
+```groovy
+pipeline {
+    agent {
+        docker {
+            image 'hateum/android-ci-box:latest'
+            args '-v /dev/kvm:/dev/kvm --user 1000:0'
+        }
+    }
+    stages {
+        stage('Build') {
+            steps { sh './gradlew assembleRelease --no-daemon' }
+        }
+    }
+}
 ```
 
 ---
@@ -242,6 +257,7 @@ instrumented_gmd_tests:
 | `Cannot open /dev/kvm: Permission denied` | Host runner permissions restrict `/dev/kvm` | Run `sudo chmod 666 /dev/kvm` on runner host or add runner user to `kvm` group |
 | `exit code 141` in CI scripts | Broken pipe under `set -e -o pipefail` | Avoid piping commands like `fastlane --version \| head -n 1` |
 | Gradle Cache misses in GitLab CI | `GRADLE_USER_HOME` outside project dir | Export `GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"` in `before_script` |
+| Bitbucket / CircleCI Out of Memory | Insufficient container RAM | Configure `size: 2x` (Bitbucket) or `resource_class: xlarge` (CircleCI) |
 
 ---
 
@@ -249,12 +265,24 @@ instrumented_gmd_tests:
 
 For detailed operational guides, see the specialized references in this skill:
 - **GitLab CI/CD Guide**: [`references/gitlab-ci.md`](references/gitlab-ci.md) (Complete `.gitlab-ci.yml`, Docker & Kubernetes Runner setups, caching patterns)
+- **GitHub Actions Guide**: [`references/github-actions.md`](references/github-actions.md) (Container jobs, self-hosted KVM runners, caching, artifacts)
+- **Jenkins Guide**: [`references/jenkins.md`](references/jenkins.md) (Declarative Jenkinsfile, Kubernetes agent Pod templates, KVM device passthrough)
+- **Bitbucket Pipelines Guide**: [`references/bitbucket-pipelines.md`](references/bitbucket-pipelines.md) (2x resource sizing, custom caches, artifact handling)
+- **CircleCI Guide**: [`references/circleci.md`](references/circleci.md) (xlarge resource class, Docker executor, store_test_results)
 - **GMD & Emulators**: [`references/gmd-emulators.md`](references/gmd-emulators.md) (DSL patterns, ATD images, foldable/tablet profiles, KVM constraints)
 - **Enterprise Networking**: [`references/enterprise-networking.md`](references/enterprise-networking.md) (Proxy routing, SSL truststore injection, internal mirrors)
+
+### Ready-to-Use Templates:
+- [GitLab CI Pipeline](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/.gitlab-ci.yml)
+- [GitHub Actions Workflow](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/github-actions.yml)
+- [Declarative Jenkinsfile](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/Jenkinsfile)
+- [Bitbucket Pipelines](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/bitbucket-pipelines.yml)
+- [CircleCI Configuration](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/circleci-config.yml)
 
 ### External Official Documentation:
 - [Google Android CLI (`android`)](https://developer.android.com/tools/android)
 - [Gradle Managed Devices Documentation](https://developer.android.com/studio/test/gradle-managed-devices)
 - [GitLab CI/CD Docker Executor](https://docs.gitlab.com/runner/executors/docker.html)
+- [Jenkins Docker Pipeline Plugin](https://plugins.jenkins.io/docker-workflow/)
 - [KubeVirt KVM Device Plugin for Kubernetes](https://github.com/kubevirt/device-plugin-kvm)
 

@@ -1,0 +1,43 @@
+# Bitbucket Pipelines configuration for Android CI/CD
+# Image: hateum/android-ci-box:latest
+
+image: hateum/android-ci-box:latest
+
+definitions:
+  caches:
+    gradlewrapper: ~/.gradle/wrapper
+    gradlecaches: ~/.gradle/caches
+
+pipelines:
+  default:
+    - step:
+        name: Build, Lint & Unit Tests
+        caches:
+          - gradlewrapper
+          - gradlecaches
+        size: 2x # 8GB memory allocation recommended for Android builds
+        script:
+          - ci-doctor --summary
+          - ./gradlew lintRelease testReleaseUnitTest check assembleRelease bundleRelease --no-daemon
+        artifacts:
+          - app/build/outputs/apk/release/*.apk
+          - app/build/outputs/bundle/release/*.aab
+          - app/build/reports/**
+
+  branches:
+    main:
+      - step:
+          name: Full Validation & Quality Gate
+          caches:
+            - gradlewrapper
+            - gradlecaches
+          size: 2x
+          script:
+            - ci-doctor
+            - ./gradlew lintRelease testReleaseUnitTest --no-daemon
+            - ./gradlew assembleRelease bundleRelease --no-daemon
+            - bundletool build-apks --bundle=app/build/outputs/bundle/release/app-release.aab --output=app/build/outputs/bundle/release/app-release.apks --mode=universal
+          artifacts:
+            - app/build/outputs/apk/release/*.apk
+            - app/build/outputs/bundle/release/*.aab
+            - app/build/outputs/bundle/release/*.apks

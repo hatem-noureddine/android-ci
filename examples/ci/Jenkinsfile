@@ -1,0 +1,83 @@
+// Declarative Jenkinsfile for Android CI/CD with hateum/android-ci-box
+pipeline {
+    agent {
+        docker {
+            image 'hateum/android-ci-box:latest'
+            // Mount host KVM device and enforce rootless execution UID
+            args '-v /dev/kvm:/dev/kvm --user 1000:0 -v /tmp/gradle-cache:/home/runner/.gradle'
+        }
+    }
+
+    options {
+        timeout(time: 1, unit: 'HOURS')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    environment {
+        CI = 'true'
+        GRADLE_OPTS = '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true'
+    }
+
+    stages {
+        stage('Diagnostics') {
+            steps {
+                sh 'ci-doctor --summary'
+            }
+        }
+
+        stage('Quality & Lint') {
+            steps {
+                sh './gradlew lintRelease check --no-daemon'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'app/build/reports/lint-results-release.*', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh './gradlew testReleaseUnitTest --no-daemon'
+            }
+            post {
+                always {
+                    junit 'app/build/test-results/testReleaseUnitTest/*.xml'
+                    archiveArtifacts artifacts: 'app/build/reports/tests/testReleaseUnitTest/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Assemble Binaries') {
+            steps {
+                sh './gradlew assembleRelease bundleRelease --no-daemon'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'app/build/outputs/apk/release/*.apk, app/build/outputs/bundle/release/*.aab', fingerprint: true
+                }
+            }
+        }
+
+        stage('GMD Instrumented Tests') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh './gradlew pixel8api35DebugAndroidTest --no-daemon --info'
+            }
+            post {
+                always {
+                    junit 'app/build/outputs/androidTest-results/managedDevice/**/*.xml'
+                    archiveArtifacts artifacts: 'app/build/reports/androidTests/managedDevice/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline failed. Check build artifacts and diagnostic logs.'
+        }
+    }
+}

@@ -1,0 +1,82 @@
+# Production GitLab CI/CD Pipeline for Android
+# Image: hateum/android-ci-box:latest
+
+stages:
+  - environment
+  - quality
+  - build
+  - test_instrumented
+  - publish
+
+default:
+  image: hateum/android-ci-box:latest
+  before_script:
+    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
+    - chmod +x ./gradlew
+  cache:
+    key:
+      files:
+        - gradle/wrapper/gradle-wrapper.properties
+        - "**/*.gradle*"
+    paths:
+      - .gradle/wrapper/
+      - .gradle/caches/
+    policy: pull-push
+
+ci_doctor:
+  stage: environment
+  script:
+    - ci-doctor --summary
+  cache: []
+
+lint_and_unit_tests:
+  stage: quality
+  script:
+    - ./gradlew lintRelease testReleaseUnitTest check --no-daemon --stacktrace
+  artifacts:
+    name: "reports-${CI_COMMIT_SHORT_SHA}"
+    when: always
+    expire_in: 7 days
+    reports:
+      junit: app/build/test-results/testReleaseUnitTest/*.xml
+    paths:
+      - app/build/reports/lint-results-release.html
+      - app/build/reports/lint-results-release.sarif
+      - app/build/reports/tests/testReleaseUnitTest/
+
+assemble_release:
+  stage: build
+  script:
+    - ./gradlew assembleRelease bundleRelease --no-daemon
+  artifacts:
+    name: "binaries-${CI_COMMIT_SHORT_SHA}"
+    expire_in: 14 days
+    paths:
+      - app/build/outputs/apk/release/*.apk
+      - app/build/outputs/bundle/release/*.aab
+
+instrumented_tests:
+  stage: test_instrumented
+  tags:
+    - kvm
+    - android-emulator
+  script:
+    - ./gradlew pixel8api35DebugAndroidTest --no-daemon --info
+  artifacts:
+    name: "instrumented-reports-${CI_COMMIT_SHORT_SHA}"
+    when: always
+    expire_in: 7 days
+    reports:
+      junit: app/build/outputs/androidTest-results/managedDevice/**/*.xml
+    paths:
+      - app/build/reports/androidTests/managedDevice/
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event"'
+
+distribute_release:
+  stage: publish
+  script:
+    - bundletool build-apks --bundle=app/build/outputs/bundle/release/app-release.aab --output=app/build/outputs/bundle/release/app-release.apks --mode=universal
+    - fastlane test
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'

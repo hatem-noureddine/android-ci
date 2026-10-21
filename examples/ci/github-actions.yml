@@ -1,0 +1,86 @@
+name: Android CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Unit Tests
+    runs-on: ubuntu-latest
+    container:
+      image: hateum/android-ci-box:latest
+      options: --user 1000:0
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Cache Gradle Packages & Wrapper
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run CI Doctor Diagnostics
+        run: ci-doctor --summary
+
+      - name: Run Unit Tests & Lint
+        run: ./gradlew lintRelease testReleaseUnitTest check --no-daemon
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: app/build/reports/tests/testReleaseUnitTest/
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-results
+          path: |
+            app/build/reports/lint-results-release.html
+            app/build/reports/lint-results-release.sarif
+
+      - name: Build Release APK & Bundle
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+
+  instrumented-tests:
+    name: GMD Instrumented Tests (KVM)
+    # Note: Requires a runner with hardware virtualization (/dev/kvm)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Gradle Managed Device Tests via Container
+        run: |
+          docker run --rm \
+            --device /dev/kvm \
+            -v "${{ github.workspace }}":/project \
+            -w /project \
+            hateum/android-ci-box:latest \
+            ./gradlew pixel8api35DebugAndroidTest --no-daemon --info
+
+      - name: Upload Instrumented Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmd-test-results
+          path: app/build/reports/androidTests/managedDevice/

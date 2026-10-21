@@ -1,0 +1,62 @@
+# CircleCI configuration for Android CI/CD
+# Image: hateum/android-ci-box:latest
+
+version: 2.1
+
+executors:
+  android-container:
+    docker:
+      - image: hateum/android-ci-box:latest
+        user: runner
+    resource_class: xlarge # 16GB RAM / 8 vCPUs recommended for Android builds
+    working_directory: ~/project
+
+jobs:
+  build-and-test:
+    executor: android-container
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "app/build.gradle" }}
+            - v1-gradle-
+
+      - run:
+          name: Environment Healthcheck
+          command: ci-doctor --summary
+
+      - run:
+          name: Lint and Unit Tests
+          command: ./gradlew lintRelease testReleaseUnitTest check --no-daemon
+
+      - run:
+          name: Assemble Release Binaries
+          command: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: v1-gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "app/build.gradle" }}
+
+      - store_test_results:
+          path: app/build/test-results
+
+      - store_artifacts:
+          path: app/build/reports
+          destination: reports
+
+      - store_artifacts:
+          path: app/build/outputs/apk/release
+          destination: apks
+
+      - store_artifacts:
+          path: app/build/outputs/bundle/release
+          destination: bundles
+
+workflows:
+  version: 2
+  android-pipeline:
+    jobs:
+      - build-and-test

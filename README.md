@@ -209,86 +209,101 @@ To activate this skill in your AI assistant, point your agent to `.agents/skills
 
 ---
 
-## 🚀 Ready-to-Use CI/CD Pipelines
+## 🚀 Multi-Platform CI/CD Integrations & Templates
 
-### 1. GitLab CI (`.gitlab-ci.yml`)
+The image is tested and pre-optimized for all major enterprise CI/CD runners. Ready-to-use pipeline configurations are available under [`examples/ci/`](examples/ci/):
+
+| CI/CD Platform | Ready-to-Use Template | Deep-Dive Reference Guide | Supported Features |
+| :--- | :--- | :--- | :--- |
+| **GitLab CI/CD** | [`examples/ci/.gitlab-ci.yml`](examples/ci/.gitlab-ci.yml) | [`references/gitlab-ci.md`](.agents/skills/android-ci-box/references/gitlab-ci.md) | Docker & Kubernetes Runners, KVM device mapping, JUnit & SARIF reports |
+| **GitHub Actions** | [`examples/ci/github-actions.yml`](examples/ci/github-actions.yml) | [`references/github-actions.md`](.agents/skills/android-ci-box/references/github-actions.md) | Container jobs, Self-Hosted KVM runners, `actions/cache@v4` |
+| **Jenkins** | [`examples/ci/Jenkinsfile`](examples/ci/Jenkinsfile) | [`references/jenkins.md`](.agents/skills/android-ci-box/references/jenkins.md) | Declarative pipelines, Docker Agent, K8s Pod Templates with KVM plugin |
+| **Bitbucket Pipelines** | [`examples/ci/bitbucket-pipelines.yml`](examples/ci/bitbucket-pipelines.yml) | [`references/bitbucket-pipelines.md`](.agents/skills/android-ci-box/references/bitbucket-pipelines.md) | Custom Docker container execution, 2x resource sizing, wrapper caches |
+| **CircleCI** | [`examples/ci/circleci-config.yml`](examples/ci/circleci-config.yml) | [`references/circleci.md`](.agents/skills/android-ci-box/references/circleci.md) | Docker executor, `xlarge` resource class, `store_test_results` |
+
+### Quick Pipeline Snippets:
+
+<details>
+<summary><b>1. GitLab CI/CD (<code>.gitlab-ci.yml</code>)</b></summary>
+
 ```yaml
-image: hateum/android-ci-box:latest
+default:
+  image: hateum/android-ci-box:latest
+  before_script:
+    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .gradle/caches/
+      - .gradle/wrapper/
 
-variables:
-  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
-
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - .gradle/caches/
-    - .gradle/wrapper/
-
-stages:
-  - test
-  - build
+stages: [ test, build ]
 
 unit_tests:
   stage: test
   script:
-    - ci-doctor
-    - ./gradlew test lintRelease check
+    - ci-doctor --summary
+    - ./gradlew lintRelease testReleaseUnitTest check --no-daemon
 
 build_apk:
   stage: build
   script:
-    - ./gradlew assembleRelease bundleRelease
+    - ./gradlew assembleRelease bundleRelease --no-daemon
   artifacts:
     paths:
       - app/build/outputs/apk/release/*.apk
       - app/build/outputs/bundle/release/*.aab
-    expire_in: 7 days
 ```
+</details>
 
-### 2. GitHub Actions (`.github/workflows/android-build.yml`)
+<details>
+<summary><b>2. GitHub Actions (<code>.github/workflows/android.yml</code>)</b></summary>
+
 ```yaml
 name: Android CI Build
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     container:
       image: hateum/android-ci-box:latest
-      options: --device /dev/kvm
-
+      options: --user 1000:0
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Cache Gradle Packages
-        uses: actions/cache@v4
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Environment Diagnostics & Tests
-        run: |
-          ci-doctor
-          ./gradlew test lintRelease
-
-      - name: Build APK & App Bundle
-        run: ./gradlew assembleRelease bundleRelease
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: app/build/outputs/apk/release/*.apk
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - run: ci-doctor --summary
+      - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
 ```
+</details>
+
+<details>
+<summary><b>3. Jenkins (<code>Jenkinsfile</code>)</b></summary>
+
+```groovy
+pipeline {
+    agent {
+        docker {
+            image 'hateum/android-ci-box:latest'
+            args '-v /dev/kvm:/dev/kvm --user 1000:0'
+        }
+    }
+    stages {
+        stage('Build & Test') {
+            steps {
+                sh 'ci-doctor --summary'
+                sh './gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon'
+            }
+        }
+    }
+}
+```
+</details>
 
 ---
 
