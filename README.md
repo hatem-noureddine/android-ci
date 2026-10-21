@@ -25,7 +25,7 @@ It features an intelligent **dual-mode universal network engine** that works ins
 ├───────────────────────────────────────────────────────────────────────────────┤
 │  ☕ Java Runtimes    : OpenJDK 21 (Default) + OpenJDK 17 (Instant switch)      │
 │  🐘 Gradle Engine   : Gradle 9.8.2 (Standalone & Wrapper Support)             │
-│  📱 Android SDK      : APIs 35, 36, 37 + Build-Tools 35.0.0, 36.0.0, 37.0.0   │
+│  📱 Android SDK & CLI : APIs 35, 36, 37 + Google Android CLI ('android')      │
 │  🎮 Emulator Engine  : Android SDK Headless Emulator + SwiftShader GPU        │
 │  🚀 Deployment Tools: Fastlane, Bundletool 1.18.3, GitHub CLI (gh)            │
 │  🐍 CI Tooling       : Python 3 & Pip (No PEP 668 restriction), Ruby          │

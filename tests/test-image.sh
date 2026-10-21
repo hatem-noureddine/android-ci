@@ -65,8 +65,9 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # ------------------------------------------------------------------------------
 # Test 4: Tooling Executables Verification
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, emulator, bundletool, fastlane, python, gh)...${RESET}"
+echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, android, emulator, bundletool, fastlane, python, gh)...${RESET}"
 gradle --version
+android --version
 if [ "$(dpkg --print-architecture)" = "amd64" ]; then
     (emulator -version 2>&1 || true) | head -n 2
 fi
