@@ -3,9 +3,11 @@
 # Optimized, Multi-arch (amd64 / arm64), Universal (Internet & Enterprise Ready)
 # Includes: Gradle 9.8.2 (Standalone & Wrapper ready), Android SDK (API 35, 36, 37),
 #           Build-tools 35, 36, 37, OpenJDK 17 & 21 (Headless), Fastlane 2.241.2,
-#           Ruby 4.0.9 (rbenv), Python3, Bundletool (1.18.3), GitHub CLI (gh),
+#           Ruby 4.0.9 (Precompiled), Python3, Bundletool (1.18.3), GitHub CLI (gh),
 #           ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
+
+FROM ruby:4.0.9-slim AS ruby-provider
 
 FROM ubuntu:24.04
 
@@ -15,7 +17,6 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG ANDROID_SDK_TOOLS_VERSION="15859902"
 ARG BUNDLETOOL_VERSION="1.18.3"
 ARG GRADLE_VERSION="9.8.2"
-ARG RUBY_VERSION="4.0.9"
 ARG FASTLANE_VERSION="2.241.2"
 ARG BUNDLER_VERSION="4.0.23"
 ARG DEBIAN_FRONTEND="noninteractive"
@@ -24,13 +25,15 @@ ARG DEBIAN_FRONTEND="noninteractive"
 ENV ANDROID_HOME="/opt/android-sdk" \
     ANDROID_SDK_ROOT="/opt/android-sdk" \
     BUNDLETOOL_PATH="/opt/bundletool/bundletool.jar" \
+    GEM_HOME="/usr/local/bundle" \
+    BUNDLE_SILENCE_ROOT_WARNING="1" \
+    BUNDLE_APP_CONFIG="/usr/local/bundle" \
     GRADLE_HOME="/opt/gradle/gradle-${GRADLE_VERSION}" \
     GRADLE_USER_HOME="/home/runner/.gradle" \
     HOME="/home/runner" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US.UTF-8" \
     LC_ALL="en_US.UTF-8" \
-    RBENV_ROOT="/opt/rbenv" \
     TZ="UTC"
 
 # Layer 1: Base system dependencies, Python3 & OpenJDK (headless)
@@ -50,6 +53,7 @@ RUN apt-get update -qq && \
         libffi-dev \
         libgl1 \
         libglu1-mesa \
+        libgmp-dev \
         libnss3 \
         libpng16-16t64 \
         libpulse0 \
@@ -113,15 +117,11 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Layer 3: Ruby 4.0 (rbenv + ruby-build) & Fastlane
-RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
-    git clone --depth 1 https://github.com/rbenv/ruby-build.git "${RBENV_ROOT}/plugins/ruby-build" && \
-    chmod -R 755 "${RBENV_ROOT}" && \
-    RUBY_CONFIGURE_OPTS="--disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
-    "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
-    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" json --no-document && \
-    "${RBENV_ROOT}/bin/rbenv" rehash && \
-    chmod -R 777 "${RBENV_ROOT}" && \
+# Layer 3: Precompiled Ruby 4.0 & Fastlane (Zero compilation overhead)
+COPY --from=ruby-provider /usr/local/ /usr/local/
+RUN mkdir -p "${GEM_HOME}" && \
+    gem install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" json --no-document && \
+    chmod -R 777 "${GEM_HOME}" /usr/local/lib/ruby /usr/local/bin 2>/dev/null || true && \
     rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
 
 # Layer 4: Install Latest Stable Gradle (9.8.2) Standalone
@@ -134,7 +134,7 @@ RUN mkdir -p /opt/gradle && \
 # Configure default JAVA_HOME, ANDROID_AVD_HOME and PATH (including Gradle and Android tools)
 ENV JAVA_HOME="/opt/default-jdk"
 ENV ANDROID_AVD_HOME="/home/runner/.android/avd"
-ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+ENV PATH="${GEM_HOME}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
 
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
@@ -186,7 +186,7 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD ["ci-doctor", "--summar
 ARG VERSION="1.0.0"
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
       org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Precompiled Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \

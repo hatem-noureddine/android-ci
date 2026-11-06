@@ -36,7 +36,7 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
   - Build-Tools: `35.0.0`, `36.0.0`, `37.0.0`
   - Command-line Tools: Latest stable (`cmdline-tools/latest`)
   - Emulator: Android SDK Headless Emulator (`$ANDROID_HOME/emulator`)
-- **Tooling**: Gradle 9.8.2, Bundletool 1.18.3, Fastlane 2.241.2, Ruby 4.0.9 (rbenv), Python 3.12, GitHub CLI (`gh`)
+- **Tooling**: Gradle 9.8.2, Bundletool 1.18.3, Fastlane 2.241.2, Ruby 4.0.9 (Precompiled), Python 3.12, GitHub CLI (`gh`)
 
 ---
 
