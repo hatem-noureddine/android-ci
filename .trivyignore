@@ -4,3 +4,6 @@
 # (GOSTCTR cipher and trailing dot not applicable to Android CI compilation)
 CVE-2025-14813
 CVE-2026-8763
+
+# Upstream Ruby bundled default json gem (overridden by fastlane-bundled json >= 2.19.2)
+CVE-2026-33210

@@ -73,6 +73,12 @@ if [ "$(dpkg --print-architecture)" = "amd64" ]; then
 fi
 bundletool version
 fastlane --version
+RUBY_VER=$(ruby -v 2>&1 | awk '{print $2}')
+echo "Ruby active: $RUBY_VER"
+if [[ "$RUBY_VER" != 4.0* ]]; then
+    echo -e "${RED}✘ Expected Ruby 4.0.x but got ${RUBY_VER}!${RESET}"
+    exit 1
+fi
 python3 --version
 pip --version
 gh --version
