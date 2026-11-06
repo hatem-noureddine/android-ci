@@ -17,7 +17,7 @@ jobs:
   # ============================================================================
   lint:
     name: Linters & Static Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -48,7 +48,7 @@ jobs:
   test:
     name: Build, Security Scan & Test Suite
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       security-events: write
@@ -58,11 +58,11 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build local test image
         id: build_image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
@@ -125,14 +125,106 @@ jobs:
             ci-doctor
 
   # ============================================================================
-  # Job 3: Multi-Arch Build & Automated Multi-Tag Release to Docker Hub
-  # Only executes if all linters, tests & security scans pass!
+  # Job 3: Native Multi-Arch Parallel Build Matrix (amd64 on x86, arm64 on arm)
+  # Builds both architectures at full native speed simultaneously!
   # ============================================================================
-  publish:
-    name: Publish Multi-Arch Image to Docker Hub
+  build-platforms:
+    name: Build Native (${{ matrix.platform }})
     needs: test
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux/amd64
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    environment: Docker
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check Docker Hub Credentials Availability
+        id: check_creds
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub credentials detected."
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "::warning ::Docker Hub secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) are not configured."
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        if: steps.check_creds.outputs.has_creds == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve Release Version
+        id: version
+        run: |
+          RAW_VER=$(tr -d '[:space:]' < VERSION)
+          echo "version=${RAW_VER}" >> "$GITHUB_OUTPUT"
+          echo "Resolved release version: ${RAW_VER}"
+
+      - name: Resolve Platform Tags
+        id: platform_tags
+        run: |
+          TAGS="ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}-${{ matrix.arch }}"
+          if [ "${{ steps.check_creds.outputs.has_creds }}" = "true" ]; then
+            TAGS="${TAGS}
+          ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-${{ matrix.arch }}"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push native platform image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+          tags: ${{ steps.platform_tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+  # ============================================================================
+  # Job 4: Create Multi-Arch Manifest Lists & Publish to Registries
+  # Merges native amd64 & arm64 images in seconds without recompilation!
+  # ============================================================================
+  publish-manifest:
+    name: Create & Publish Multi-Arch Manifests
+    needs: [test, build-platforms]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-24.04
     environment: Docker
     permissions:
       contents: write
@@ -156,21 +248,18 @@ jobs:
             echo "::warning ::Docker Hub secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) are not configured."
           fi
 
-      - name: Set up QEMU (for multi-arch amd64 / arm64)
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
         if: steps.check_creds.outputs.has_creds == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Log in to GitHub Container Registry (GHCR)
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -206,18 +295,31 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,format=short
 
-      - name: Build and push Multi-Arch Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          build-args: |
-            VERSION=${{ steps.version.outputs.version }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Create and Push Multi-Arch Manifests
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DOCKERHUB_TAG_ARGS=()
+          GHCR_TAG_ARGS=()
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            if [[ "$tag" == "${{ env.IMAGE_NAME }}:"* ]]; then
+              DOCKERHUB_TAG_ARGS+=("-t" "$tag")
+            elif [[ "$tag" == "ghcr.io/"* ]]; then
+              GHCR_TAG_ARGS+=("-t" "$tag")
+            fi
+          done <<< "${{ steps.meta.outputs.tags }}"
+
+          if [ "${{ steps.check_creds.outputs.has_creds }}" = "true" ]; then
+            echo "Creating multi-arch manifest on Docker Hub..."
+            docker buildx imagetools create "${DOCKERHUB_TAG_ARGS[@]}" \
+              "${{ env.IMAGE_NAME }}:${VERSION}-amd64" \
+              "${{ env.IMAGE_NAME }}:${VERSION}-arm64"
+          fi
+
+          echo "Creating multi-arch manifest on GHCR..."
+          docker buildx imagetools create "${GHCR_TAG_ARGS[@]}" \
+            "ghcr.io/${{ github.repository }}:${VERSION}-amd64" \
+            "ghcr.io/${{ github.repository }}:${VERSION}-arm64"
 
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -240,9 +342,9 @@ jobs:
           | Metric | Status / Value |
           | :--- | :--- |
           | **Release Version** | \`v${{ steps.version.outputs.version }}\` (SemVer Major: \`${{ steps.version.outputs.major }}\`, Minor: \`${{ steps.version.outputs.minor }}\`) |
-          | **Architectures** | \`linux/amd64\`, \`linux/arm64\` (Multi-Arch Native) |
+          | **Architectures** | \`linux/amd64\`, \`linux/arm64\` (Native Multi-Arch Matrix) |
           | **Docker Hub** | [\`${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`](https://hub.docker.com/r/${{ env.IMAGE_NAME }}) |
           | **GHCR Mirror** | [\`ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}\`](https://github.com/${{ github.repository }}/pkgs/container/android-ci) |
           | **Security Verdict** | ✅ Zero unfixed critical CVEs (Trivy Scan Passed) |
-          | **Core Stack** | AGP 9.4.1, Gradle 9.8.2, OpenJDK 17/21, Android SDK 35/36/37, Native GMD |
+          | **Core Stack** | AGP 9.4.1, Gradle 9.8.2, OpenJDK 17/21, Precompiled Ruby 4.0.9, Fastlane 2.241.2, Android SDK 35/36/37, Native GMD |
           EOF

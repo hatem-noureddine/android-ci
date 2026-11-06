@@ -50,6 +50,7 @@ RUN apt-get update -qq && \
         libffi-dev \
         libgl1 \
         libglu1-mesa \
+        libgmp-dev \
         libnss3 \
         libpng16-16t64 \
         libpulse0 \
@@ -113,11 +114,11 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Layer 3: Ruby 4.0 (rbenv + ruby-build) & Fastlane
+# Layer 3: Ruby 4.0 (rbenv + ruby-build) & Fastlane (Fast parallel native compilation)
 RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
     git clone --depth 1 https://github.com/rbenv/ruby-build.git "${RBENV_ROOT}/plugins/ruby-build" && \
     chmod -R 755 "${RBENV_ROOT}" && \
-    RUBY_CONFIGURE_OPTS="--disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
+    MAKE_OPTS="-j$(nproc)" RUBY_CONFIGURE_OPTS="--disable-install-doc --disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
     "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
     "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" json --no-document && \
     "${RBENV_ROOT}/bin/rbenv" rehash && \
