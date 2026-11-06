@@ -59,6 +59,7 @@ RUN apt-get update -qq && \
         libxcomposite1 \
         libxcursor1 \
         libxi6 \
+        libxkbfile1 \
         libxrandr2 \
         libxtst6 \
         libyaml-dev \
@@ -118,8 +119,7 @@ RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
     chmod -R 755 "${RBENV_ROOT}" && \
     RUBY_CONFIGURE_OPTS="--disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
     "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
-    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" --no-document && \
-    find "${RBENV_ROOT}" -name "json-2.18.0*.gemspec" -delete 2>/dev/null || true && \
+    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" json --no-document && \
     "${RBENV_ROOT}/bin/rbenv" rehash && \
     chmod -R 777 "${RBENV_ROOT}" && \
     rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
