@@ -2,9 +2,9 @@
 # Docker Android CI Build Box
 # Optimized, Multi-arch (amd64 / arm64), Universal (Internet & Enterprise Ready)
 # Includes: Gradle 9.8.2 (Standalone & Wrapper ready), Android SDK (API 35, 36, 37),
-#           Build-tools 35, 36, 37, OpenJDK 17 & 21 (Headless), Fastlane, Ruby,
-#           Python3, Bundletool (1.18.3), GitHub CLI (gh), ci-doctor CLI,
-#           Hardened Root & Non-Root Support
+#           Build-tools 35, 36, 37, OpenJDK 17 & 21 (Headless), Fastlane 2.241.2,
+#           Ruby 4.0.9 (rbenv), Python3, Bundletool (1.18.3), GitHub CLI (gh),
+#           ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
 
 FROM ubuntu:24.04
@@ -15,6 +15,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG ANDROID_SDK_TOOLS_VERSION="15859902"
 ARG BUNDLETOOL_VERSION="1.18.3"
 ARG GRADLE_VERSION="9.8.2"
+ARG RUBY_VERSION="4.0.9"
+ARG FASTLANE_VERSION="2.241.2"
+ARG BUNDLER_VERSION="4.0.23"
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Standard Environment Variables
@@ -27,12 +30,14 @@ ENV ANDROID_HOME="/opt/android-sdk" \
     LANG="en_US.UTF-8" \
     LANGUAGE="en_US.UTF-8" \
     LC_ALL="en_US.UTF-8" \
+    RBENV_ROOT="/opt/rbenv" \
     TZ="UTC"
 
-# Layer 1: Base system dependencies, Python3, Ruby & OpenJDK (headless)
+# Layer 1: Base system dependencies, Python3 & OpenJDK (headless)
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
         apt-transport-https \
+        autoconf \
         build-essential \
         ca-certificates \
         curl \
@@ -42,17 +47,21 @@ RUN apt-get update -qq && \
         gnupg \
         libasound2t64 \
         libegl1 \
+        libffi-dev \
         libgl1 \
         libglu1-mesa \
         libnss3 \
         libpng16-16t64 \
         libpulse0 \
+        libreadline-dev \
+        libssl-dev \
         libvulkan1 \
         libxcomposite1 \
         libxcursor1 \
         libxi6 \
         libxrandr2 \
         libxtst6 \
+        libyaml-dev \
         locales \
         openjdk-17-jdk-headless \
         openjdk-21-jdk-headless \
@@ -62,13 +71,19 @@ RUN apt-get update -qq && \
         python3-pip \
         python3-venv \
         python3-dev \
-        ruby-full \
-        ruby-dev \
         tzdata \
         unzip \
         wget \
         zip \
         zlib1g-dev && \
+    ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+        sed -i 's/^Types: deb$/Types: deb\nArchitectures: arm64/' /etc/apt/sources.list.d/ubuntu.sources && \
+        printf "Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: noble noble-updates noble-backports\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n" > /etc/apt/sources.list.d/amd64.sources && \
+        dpkg --add-architecture amd64 && \
+        apt-get update -qq && \
+        apt-get install -qq -y --no-install-recommends libc6:amd64 libstdc++6:amd64 zlib1g:amd64; \
+    fi && \
     locale-gen "${LANG}" && \
     update-locale LANG="${LANG}" LC_ALL="${LC_ALL}" && \
     touch /etc/subuid /etc/subgid && \
@@ -78,7 +93,6 @@ RUN apt-get update -qq && \
     ln -sf /home/runner/.gradle /root/.gradle && \
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
-    ARCH=$(dpkg --print-architecture) && \
     ln -s "/usr/lib/jvm/java-21-openjdk-${ARCH}" /opt/jdk-21 && \
     ln -s "/usr/lib/jvm/java-17-openjdk-${ARCH}" /opt/jdk-17 && \
     ln -s /opt/jdk-21 /opt/default-jdk && \
@@ -98,9 +112,16 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Layer 3: Fastlane and Bundler
-RUN gem install bundler fastlane --no-document && \
-    rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle
+# Layer 3: Ruby 4.0 (rbenv + ruby-build) & Fastlane
+RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
+    git clone --depth 1 https://github.com/rbenv/ruby-build.git "${RBENV_ROOT}/plugins/ruby-build" && \
+    chmod -R 755 "${RBENV_ROOT}" && \
+    RUBY_CONFIGURE_OPTS="--disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
+    "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
+    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" --no-document && \
+    "${RBENV_ROOT}/bin/rbenv" rehash && \
+    chmod -R 777 "${RBENV_ROOT}" && \
+    rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
 
 # Layer 4: Install Latest Stable Gradle (9.8.2) Standalone
 RUN mkdir -p /opt/gradle && \
@@ -112,7 +133,7 @@ RUN mkdir -p /opt/gradle && \
 # Configure default JAVA_HOME, ANDROID_AVD_HOME and PATH (including Gradle and Android tools)
 ENV JAVA_HOME="/opt/default-jdk"
 ENV ANDROID_AVD_HOME="/home/runner/.android/avd"
-ENV PATH="${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
+ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
 
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
@@ -164,7 +185,7 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD ["ci-doctor", "--summar
 ARG VERSION="1.0.0"
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
       org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Fastlane, Python3, Bundletool & Universal Network Auto-Detection" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \

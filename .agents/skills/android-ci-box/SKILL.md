@@ -27,7 +27,7 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 
 ## 1. Container Specifications & Runtime Context
 
-- **Docker Image**: `hateum/android-ci-box:latest` (or SemVer tag `1.1.0`)
+- **Docker Image**: `hateum/android-ci-box:latest` (or SemVer tag `1.3.0`)
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -36,7 +36,7 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
   - Build-Tools: `35.0.0`, `36.0.0`, `37.0.0`
   - Command-line Tools: Latest stable (`cmdline-tools/latest`)
   - Emulator: Android SDK Headless Emulator (`$ANDROID_HOME/emulator`)
-- **Tooling**: Gradle 9.8.2, Bundletool 1.18.3, Fastlane, Python 3.12, GitHub CLI (`gh`)
+- **Tooling**: Gradle 9.8.2, Bundletool 1.18.3, Fastlane 2.241.2, Ruby 4.0.9 (rbenv), Python 3.12, GitHub CLI (`gh`)
 
 ---
 
