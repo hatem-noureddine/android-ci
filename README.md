@@ -7,6 +7,8 @@
 [![Gradle Version](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-API%2035%20%7C%2036%20%7C%2037-34A853?style=flat-square&logo=android)](https://developer.android.com)
 [![Java](https://img.shields.io/badge/OpenJDK-17%20%7C%2021%20(Default)-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org)
+[![Fastlane](https://img.shields.io/badge/Fastlane-2.241.2-00F?style=flat-square&logo=fastlane)](https://fastlane.tools)
+[![Ruby](https://img.shields.io/badge/Ruby-4.0.9%20(rbenv)-CC342D?style=flat-square&logo=ruby)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 A modern, high-performance, and hardened Docker image engineered for **Android Continuous Integration and Delivery (CI/CD)** pipelines across **GitHub Actions**, **GitLab Runner**, **Jenkins**, and **Bitbucket Pipelines**.
@@ -27,8 +29,9 @@ It features an intelligent **dual-mode universal network engine** that works ins
 │  🐘 Gradle Engine   : Gradle 9.8.2 (Standalone & Wrapper Support)             │
 │  📱 Android SDK & CLI : APIs 35, 36, 37 + Google Android CLI ('android')      │
 │  🎮 Emulator Engine  : Android SDK Headless Emulator + SwiftShader GPU        │
-│  🚀 Deployment Tools: Fastlane, Bundletool 1.18.3, GitHub CLI (gh)            │
-│  🐍 CI Tooling       : Python 3 & Pip (No PEP 668 restriction), Ruby          │
+│  🚀 Deployment Tools: Fastlane 2.241.2, Bundletool 1.18.3, GitHub CLI (gh)    │
+│  💎 Ruby & Gems      : Ruby 4.0.9 (rbenv, /opt/rbenv), Bundler 4.0.23          │
+│  🐍 CI Tooling       : Python 3 & Pip (No PEP 668 restriction)                 │
 │  🩺 Health Diagnostic: Built-in 'ci-doctor' CLI utility                       │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                      🌐 DUAL-MODE UNIVERSAL NETWORK ENGINE                    │
@@ -265,12 +268,12 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: hateum/android-ci-box:latest
       options: --user 1000:0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/cache@v4
         with:
           path: |
@@ -279,6 +282,10 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
       - run: ci-doctor --summary
       - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
+      - name: Deploy with Fastlane (Optional)
+        run: bundle exec fastlane deploy
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY }}
 ```
 </details>
 
@@ -304,6 +311,117 @@ pipeline {
 }
 ```
 </details>
+
+---
+
+## 🚀 Fastlane CI/CD & Google Play Deployment Guide
+
+The image includes **Ruby 4.0.9**, **Bundler 4.0.23**, and **Fastlane 2.241.2** pre-configured in `/opt/rbenv` with universal permissions (`777`), enabling both root and non-root runners to execute lanes out-of-the-box.
+
+### 1. Project Configuration
+
+Add a minimal `Gemfile` and `fastlane/Fastfile` to your Android repository:
+
+`Gemfile`:
+```ruby
+source "https://rubygems.org"
+gem "fastlane", "2.241.2"
+```
+
+`fastlane/Fastfile`:
+```ruby
+default_platform(:android)
+
+platform :android do
+  desc "Build and publish Release AAB to Google Play Internal Track"
+  lane :deploy_internal do
+    gradle(task: "clean bundleRelease")
+    
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
+```
+
+### 2. Google Play API Credentials Setup
+
+Instead of storing sensitive `.json` key files in your Git repository, pass the service account JSON content directly through the CI environment variable:
+
+- **`SUPPLY_JSON_KEY_DATA`**: The raw JSON content of your Google Play Service Account Key (configured in GitHub Secrets as `PLAY_STORE_JSON_KEY`).
+- Alternatively, mount a secret file: `-e SUPPLY_JSON_KEY=/secrets/play_key.json -v /local/key.json:/secrets/play_key.json:ro`.
+
+### 3. Execution in Container
+
+```bash
+docker run --rm \
+  -v "$(pwd)":/project \
+  -w /project \
+  -e SUPPLY_JSON_KEY_DATA="${PLAY_STORE_JSON_KEY}" \
+  hateum/android-ci-box:latest \
+  bundle exec fastlane android deploy_internal
+```
+
+---
+
+## 🔐 Android Keystore Signing via CI Environment Variables
+
+To sign release builds (`assembleRelease` or `bundleRelease`) reproducibly in CI without checking private `.jks`/`.keystore` files into source control, use Base64 encoding.
+
+### 1. Encode your Keystore Locally
+```bash
+# Linux / macOS
+base64 -i release.keystore | tr -d '\n' > keystore.base64
+```
+Store this string in your CI secrets as `KEYSTORE_BASE64`.
+
+### 2. Configure `app/build.gradle` (or `app/build.gradle.kts`)
+Read signing properties dynamically from environment variables or gradle properties:
+
+```groovy
+android {
+    signingConfigs {
+        release {
+            def keystoreFile = file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+```
+
+### 3. Decode & Build in GitHub Actions Workflow
+```yaml
+      - name: Decode Release Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
+
+      - name: Build and Sign Release AAB
+        run: ./gradlew bundleRelease --no-daemon
+        env:
+          KEYSTORE_PATH: /tmp/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Cleanup Keystore
+        if: always()
+        run: rm -f /tmp/release.keystore
+```
 
 ---
 
