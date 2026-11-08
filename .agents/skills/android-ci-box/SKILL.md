@@ -1,7 +1,7 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.2.0
+version: 1.3.2
 triggers:
   - "build android"
   - "run android tests"
@@ -27,7 +27,7 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 
 ## 1. Container Specifications & Runtime Context
 
-- **Docker Image**: `hateum/android-ci-box:latest` (or SemVer tag `1.3.0`)
+- **Docker Image**: `hateum/android-ci-box:latest` (or SemVer tag `1.3.2`)
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -49,8 +49,20 @@ Always run `ci-doctor` as the first diagnostic step before running any complex b
 # Full environment diagnostic and network connectivity probe
 ci-doctor
 
-# Silent exit-code check for automated health checks
+# Fast, machine-readable JSON status report (<0.1s, no network delay)
+ci-doctor --json
 ci-doctor --summary
+```
+
+### Step 2: Zero-Code CI Runtime Version Selection
+Instead of writing setup commands in your pipeline, configure versions directly via CI environment variables:
+
+```bash
+# Automatically switch to JDK 17 on container startup:
+export JAVA_VERSION="17"
+
+# Automatically install older/additional Android SDK platform on startup:
+export INSTALL_SDK_VERSION="34"
 ```
 
 What `ci-doctor` checks:

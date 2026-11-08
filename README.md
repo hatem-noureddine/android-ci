@@ -89,10 +89,17 @@ switch-jdk 17
 
 # Switch back to OpenJDK 21
 switch-jdk 21
+
+# Or export to your current interactive shell
+source switch-jdk 17
 ```
 
-Or declare it directly in your CI runner environment:
+Or declare it directly as an environment variable in your CI runner (auto-switched on container startup by `entrypoint.sh`):
 ```yaml
+environment:
+  JAVA_VERSION: "17"           # Automatically toggles to OpenJDK 17
+  INSTALL_SDK_VERSION: "34"    # Automatically installs API 34 if not already present
+```
 environment:
   JAVA_HOME: "/opt/jdk-17"
 ```

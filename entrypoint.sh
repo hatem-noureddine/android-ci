@@ -11,6 +11,27 @@ GRADLE_DIR="${GRADLE_USER_HOME:-/home/runner/.gradle}"
 mkdir -p "$GRADLE_DIR" "$GRADLE_DIR/init.d" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
+# 0. CI Environment Version Customization (JAVA_VERSION & INSTALL_SDK_VERSION)
+# ------------------------------------------------------------------------------
+REQ_JAVA="${JAVA_VERSION:-${DEFAULT_JDK:-}}"
+if [ -n "$REQ_JAVA" ]; then
+    if [ "$REQ_JAVA" = "17" ] || [ "$REQ_JAVA" = "21" ]; then
+        if command -v switch-jdk >/dev/null 2>&1; then
+            switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+REQ_SDK="${INSTALL_SDK_VERSION:-${ANDROID_COMPILE_SDK:-}}"
+if [ -n "$REQ_SDK" ]; then
+    if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/platforms/android-${REQ_SDK}" ]; then
+        if command -v install-sdk-version >/dev/null 2>&1; then
+            install-sdk-version "$REQ_SDK" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# ------------------------------------------------------------------------------
 # 1. Gradle CI Performance Optimization Defaults
 # ------------------------------------------------------------------------------
 GRADLE_PROP_FILE="$GRADLE_DIR/gradle.properties"

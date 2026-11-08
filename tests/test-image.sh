@@ -162,7 +162,19 @@ else
 fi
 
 rm -rf "$TEST_GRADLE_DIR"
-echo -e "${GREEN}✔ Enterprise network integration verified!${RESET}\n"
+
+echo "Testing entrypoint auto-switch via JAVA_VERSION=17..."
+TEST_ENTRY_DIR="/tmp/test_entry_jdk"
+mkdir -p "$TEST_ENTRY_DIR"
+if GRADLE_USER_HOME="$TEST_ENTRY_DIR" JAVA_VERSION="17" /entrypoint.sh java -version 2>&1 | grep -q '17\.'; then
+    echo -e "${GREEN}✔ entrypoint.sh auto-switched to JDK 17 via JAVA_VERSION=17!${RESET}"
+else
+    echo -e "${RED}✘ entrypoint.sh failed to switch JDK via JAVA_VERSION=17!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_ENTRY_DIR"
+
+echo -e "${GREEN}✔ Enterprise network integration & runtime customization verified!${RESET}\n"
 
 # ------------------------------------------------------------------------------
 # Test 6: Real Android Compilation, AAB Build & Bundletool Extraction

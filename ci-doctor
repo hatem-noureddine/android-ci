@@ -112,7 +112,8 @@ if [ "$MODE" = "json" ]; then
     fi
 
     clean_token() {
-        echo "$1" | tr -d '"' | tr -d "\\"
+        local val="${1//\"/}"
+        echo "${val//\\/}"
     }
 
     FORMATTED_JDKS=$(echo "$AVAILABLE_JDKS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
