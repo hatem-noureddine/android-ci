@@ -43,27 +43,27 @@ JAVA_VER=""
 if command -v java >/dev/null 2>&1; then
     JAVA_VER=$(java -version 2>&1 | head -n 1)
 fi
-AVAILABLE_JDKS=$(find /opt -maxdepth 1 -name "jdk-*" -exec basename {} + 2>/dev/null | tr '\n' ' ')
+AVAILABLE_JDKS=$(find /opt -maxdepth 1 -name "jdk-*" -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
 
 # 3. Android SDK Components
 SDK_HOME_VAL="${ANDROID_HOME:-Not set}"
 PLATFORMS=""
 if [ -d "${ANDROID_HOME:-/opt/android-sdk}/platforms" ]; then
-    PLATFORMS=$(find "${ANDROID_HOME:-/opt/android-sdk}/platforms" -mindepth 1 -maxdepth 1 -exec basename {} + 2>/dev/null | tr '\n' ' ')
+    PLATFORMS=$(find "${ANDROID_HOME:-/opt/android-sdk}/platforms" -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
 fi
 BUILD_TOOLS=""
 if [ -d "${ANDROID_HOME:-/opt/android-sdk}/build-tools" ]; then
-    BUILD_TOOLS=$(find "${ANDROID_HOME:-/opt/android-sdk}/build-tools" -mindepth 1 -maxdepth 1 -exec basename {} + 2>/dev/null | tr '\n' ' ')
+    BUILD_TOOLS=$(find "${ANDROID_HOME:-/opt/android-sdk}/build-tools" -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
 fi
 
 # 4. Automation & Deployment Tooling
 GRADLE_VER=""
 if command -v gradle >/dev/null 2>&1; then
-    GRADLE_VER=$(gradle -version 2>&1 | grep "Gradle " | head -n 1 | awk '{print $2}')
+    GRADLE_VER=$(gradle -version 2>&1 | grep -E '^Gradle [0-9]' | head -n 1 | awk '{print $2}')
 fi
 FASTLANE_VER=""
 if command -v fastlane >/dev/null 2>&1; then
-    FASTLANE_VER=$( (fastlane --version 2>&1 || true) | head -n 1 | awk '{print $NF}')
+    FASTLANE_VER=$( (fastlane --version 2>&1 || true) | grep -oE 'fastlane [0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 | awk '{print $2}')
 fi
 BUNDLETOOL_VER=""
 if command -v bundletool >/dev/null 2>&1; then
@@ -71,7 +71,7 @@ if command -v bundletool >/dev/null 2>&1; then
 fi
 ANDROID_CLI_VER=""
 if command -v android >/dev/null 2>&1; then
-    ANDROID_CLI_VER=$( (android --version 2>&1 || true) | head -n 1)
+    ANDROID_CLI_VER=$( (android --version 2>&1 || true) | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1)
 fi
 RUBY_VER=""
 if command -v ruby >/dev/null 2>&1; then
