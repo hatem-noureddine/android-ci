@@ -1,19 +1,30 @@
 #!/bin/bash
 set -euo pipefail
 
-case "${1:-}" in
+TARGET="${1:-}"
+
+case "$TARGET" in
   17)
     export JAVA_HOME="/opt/jdk-17"
-    ln -snf /opt/jdk-17 /opt/default-jdk
+    if [ -w "/opt" ] || [ -w "/opt/default-jdk" ]; then
+      ln -snf /opt/jdk-17 /opt/default-jdk 2>/dev/null || true
+    fi
     echo "Switched to JDK 17 ($JAVA_HOME)"
     ;;
   21)
     export JAVA_HOME="/opt/jdk-21"
-    ln -snf /opt/jdk-21 /opt/default-jdk
+    if [ -w "/opt" ] || [ -w "/opt/default-jdk" ]; then
+      ln -snf /opt/jdk-21 /opt/default-jdk 2>/dev/null || true
+    fi
     echo "Switched to JDK 21 ($JAVA_HOME)"
     ;;
   *)
     echo "Usage: switch-jdk [17|21]"
+    echo "To export JAVA_HOME directly into your calling shell, run: source switch-jdk [17|21]"
     exit 1
     ;;
 esac
+
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  echo "Hint: to export JAVA_HOME into your current shell session, use: source switch-jdk $TARGET"
+fi

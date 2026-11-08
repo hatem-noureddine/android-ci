@@ -70,7 +70,11 @@ docker run -it --rm \
 ### 3. Run the Built-In Diagnostics Tool
 Validate your runtime, JDK versions, SDK packages, and network connectivity in seconds:
 ```bash
+# Full interactive colorized diagnostic with network connectivity probes
 docker run --rm hateum/android-ci-box:latest ci-doctor
+
+# Fast, machine-readable JSON status report (used by Docker Healthcheck & CI monitoring)
+docker run --rm hateum/android-ci-box:latest ci-doctor --json
 ```
 
 ---

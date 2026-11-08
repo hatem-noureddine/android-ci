@@ -167,6 +167,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
     mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle /home/runner/.android/avd && \
+    chmod 777 /opt /opt/default-jdk 2>/dev/null || true && \
     chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
     find /opt -name "cacerts" -exec chmod 666 {} +
 

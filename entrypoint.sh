@@ -211,7 +211,7 @@ fi
 # ------------------------------------------------------------------------------
 AVD_DIR="${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
 mkdir -p /builds /project /certificates "$AVD_DIR" 2>/dev/null || true
-chmod 777 /builds /project /certificates 2>/dev/null || true
+chmod 777 /opt /opt/default-jdk /builds /project /certificates 2>/dev/null || true
 chmod -R 777 "$GRADLE_DIR" "$AVD_DIR" 2>/dev/null || true
 if [ -e /dev/kvm ] && [ "$(id -u)" -eq 0 ]; then
     chmod 666 /dev/kvm 2>/dev/null || true
