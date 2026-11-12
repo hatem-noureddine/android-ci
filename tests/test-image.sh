@@ -118,6 +118,8 @@ echo "Verifying detect-android-project CLI interface & detection..."
 DETECT_OUT=$(detect-android-project /project/test_projects/SampleProject)
 echo "$DETECT_OUT"
 if echo "$DETECT_OUT" | grep -q "Android Project       : Yes" && \
+   echo "$DETECT_OUT" | grep -q "Gradle Wrapper        : 9.8.2" && \
+   echo "$DETECT_OUT" | grep -q "Android Gradle Plugin : 9.4.1" && \
    echo "$DETECT_OUT" | grep -q "Target compileSdk     : 37" && \
    echo "$DETECT_OUT" | grep -q "Target Java Version   : 17"; then
     echo -e "${GREEN}✔ detect-android-project correctly detected SampleProject requirements!${RESET}"
