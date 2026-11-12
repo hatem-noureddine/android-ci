@@ -73,6 +73,11 @@ export INSTALL_BUILD_TOOLS="34.0.0"
 export INSTALL_NDK_VERSION="27.2.12479018"
 export INSTALL_CMAKE_VERSION="3.22.1"
 
+# Enterprise Nexus mirrors & offline execution:
+export NEXUS_URL="https://nexus.corp/repository/maven-public"
+export NEXUS_RUBY_URL="https://nexus.corp/repository/rubygems"
+export OFFLINE_MODE="true" # Enforce strict offline operation
+
 # Optional: Disable automatic static detection or auto-download if running air-gapped:
 export AUTO_DETECT_PROJECT="false"
 export AUTO_INSTALL_SDK="false"

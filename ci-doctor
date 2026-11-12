@@ -98,7 +98,12 @@ fi
 PROXY_VAL="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
 CA_COUNT=$(find /certificates /usr/local/share/ca-certificates -maxdepth 1 \( -name "*.crt" -o -name "*.pem" \) 2>/dev/null | wc -l)
 MIRROR_VAL="${NEXUS_URLS:-${NEXUS_URL:-${INTERNAL_MAVEN_URL:-}}}"
+RUBY_MIRROR_VAL="${NEXUS_RUBY_URL:-${RUBYGEM_MIRROR_URL:-${RUBY_MIRROR_URL:-}}}"
 CACHE_VAL="${GRADLE_BUILD_CACHE_URL:-${GRADLE_REMOTE_CACHE_URL:-}}"
+OFFLINE_STATUS="disabled"
+if [ "${OFFLINE_MODE:-false}" = "true" ] || [ -f "${GRADLE_USER_HOME:-/home/runner/.gradle}/init.d/fallback-offline.init.gradle" ]; then
+    OFFLINE_STATUS="active"
+fi
 
 # 6. Android Emulator & KVM
 EMU_VERSION=""
@@ -148,7 +153,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.4.0",
+  "version": "1.4.1",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
@@ -183,6 +188,8 @@ if [ "$MODE" = "json" ]; then
     "proxy": "$( [ -n "$PROXY_VAL" ] && clean_token "$PROXY_VAL" || echo "none" )",
     "ca_certificates_count": $CA_COUNT,
     "nexus_mirror": "$( [ -n "$MIRROR_VAL" ] && clean_token "$MIRROR_VAL" || echo "direct" )",
+    "nexus_ruby_mirror": "$( [ -n "$RUBY_MIRROR_VAL" ] && clean_token "$RUBY_MIRROR_VAL" || echo "rubygems.org" )",
+    "offline_fallback": "$(clean_token "$OFFLINE_STATUS")",
     "build_cache": "$( [ -n "$CACHE_VAL" ] && clean_token "$CACHE_VAL" || echo "local" )"
   },
   "virtualization": {
@@ -293,6 +300,18 @@ if [ -n "$MIRROR_VAL" ]; then
     fi
 else
     echo -e "  Nexus Mirror    : ${GREEN}Standard direct repositories (Google, MavenCentral, GradlePortal)${RESET}"
+fi
+
+if [ -n "$RUBY_MIRROR_VAL" ]; then
+    echo -e "  RubyGems Mirror : ${YELLOW}Active -> ${RUBY_MIRROR_VAL}${RESET}"
+else
+    echo -e "  RubyGems Mirror : ${GREEN}Standard direct rubygems.org${RESET}"
+fi
+
+if [ "$OFFLINE_STATUS" = "active" ]; then
+    echo -e "  Offline Fallback: ${YELLOW}Active (Gradle startParameter.offline=true)${RESET}"
+else
+    echo -e "  Offline Fallback: ${CYAN}Standby (Automatic network failure safeguard)${RESET}"
 fi
 
 if [ -n "$CACHE_VAL" ]; then

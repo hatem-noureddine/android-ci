@@ -99,17 +99,39 @@ fi
 
 # Fast 2s network reachability probe (prevents CI hangs in air-gapped environments)
 can_reach_network() {
+    if [ "${OFFLINE_MODE:-false}" = "true" ]; then
+        return 1
+    fi
     local probe_target="https://dl.google.com"
     if [ -n "${NEXUS_URL:-}" ]; then
         probe_target="${NEXUS_URL}"
+    elif [ -n "${NEXUS_RUBY_URL:-}" ]; then
+        probe_target="${NEXUS_RUBY_URL}"
     fi
     curl -s -m 2 -o /dev/null "$probe_target" 2>/dev/null
 }
 
+# Network reachability evaluation & Graceful Offline Fallback Engine
+NETWORK_REACHABLE=true
+if ! can_reach_network; then
+    NETWORK_REACHABLE=false
+    echo "ℹ️  [network] Target unreachable or OFFLINE_MODE active. Enabling offline safeguards."
+    if [ "${ENABLE_OFFLINE_FALLBACK:-true}" != "false" ] && [ -d "$GRADLE_DIR/init.d" ]; then
+        echo "⚡ [offline-fallback] Injected Gradle offline mode fallback (startParameter.offline = true)"
+        cat << 'EOF' > "$GRADLE_DIR/init.d/fallback-offline.init.gradle"
+gradle.startParameter.offline = true
+gradle.projectsLoaded {
+    rootProject.logger.warn("⚠️ [hateum/android-ci-box] Network unreachable: Offline fallback active (startParameter.offline=true)")
+}
+EOF
+        export BUNDLE_OFFLINE="true"
+    fi
+fi
+
 # Apply / Install Android SDK Platform
 if [ -n "$REQ_SDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/platforms/android-${REQ_SDK}" ]; then
-        if can_reach_network; then
+        if [ "$NETWORK_REACHABLE" = "true" ]; then
             echo "⬇️  [sdk] Android platform android-${REQ_SDK} not present. Auto-installing..."
             if command -v install-sdk-version >/dev/null 2>&1; then
                 install-sdk-version "$REQ_SDK" >/dev/null 2>&1 || true
@@ -123,7 +145,7 @@ fi
 # Apply / Install Android Build-Tools
 if [ -n "$REQ_BUILD_TOOLS" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/build-tools/${REQ_BUILD_TOOLS}" ]; then
-        if can_reach_network; then
+        if [ "$NETWORK_REACHABLE" = "true" ]; then
             echo "⬇️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} not present. Auto-installing..."
             if command -v install-sdk-version >/dev/null 2>&1; then
                 install-sdk-version "$REQ_BUILD_TOOLS" >/dev/null 2>&1 || true
@@ -138,7 +160,7 @@ fi
 if [ -n "$REQ_NDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     NDK_BASE_DIR="${ANDROID_HOME:-/opt/android-sdk}/ndk/${REQ_NDK}"
     if [ ! -d "$NDK_BASE_DIR" ]; then
-        if can_reach_network; then
+        if [ "$NETWORK_REACHABLE" = "true" ]; then
             echo "⬇️  [ndk] Android NDK ${REQ_NDK} not present. Auto-installing..."
             if command -v install-ndk-version >/dev/null 2>&1; then
                 install-ndk-version "$REQ_NDK" "${REQ_CMAKE:-}" >/dev/null 2>&1 || true
@@ -159,7 +181,7 @@ fi
 if [ -n "$REQ_CMAKE" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     CMAKE_BASE_DIR="${ANDROID_HOME:-/opt/android-sdk}/cmake/${REQ_CMAKE}"
     if [ ! -d "$CMAKE_BASE_DIR" ]; then
-        if can_reach_network; then
+        if [ "$NETWORK_REACHABLE" = "true" ]; then
             echo "⬇️  [cmake] Android CMake ${REQ_CMAKE} not present. Auto-installing..."
             "${ANDROID_HOME:-/opt/android-sdk}/cmdline-tools/latest/bin/sdkmanager" "cmake;${REQ_CMAKE}" >/dev/null 2>&1 || true
         else
@@ -348,6 +370,29 @@ allprojects {
     }
 }
 EOF
+fi
+
+# ------------------------------------------------------------------------------
+# 4.1 Enterprise Ruby & Fastlane Gem Mirror (Bundler & RubyGems)
+# Active if NEXUS_RUBY_URL, RUBYGEM_MIRROR_URL, or RUBY_MIRROR_URL is defined
+# ------------------------------------------------------------------------------
+RUBY_MIRROR_TARGET="${NEXUS_RUBY_URL:-${RUBYGEM_MIRROR_URL:-${RUBY_MIRROR_URL:-}}}"
+if [ -n "$RUBY_MIRROR_TARGET" ]; then
+    echo "💎 [ruby-mirror] Configuring Bundler & RubyGems mirror: ${RUBY_MIRROR_TARGET}"
+    if command -v bundle >/dev/null 2>&1; then
+        bundle config set --global mirror.https://rubygems.org "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
+        bundle config set --global mirror.https://rubygems.org/ "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
+
+        RUBY_AUTH_USER="${NEXUS_RUBY_USER:-${NEXUS_USER:-}}"
+        RUBY_AUTH_PASS="${NEXUS_RUBY_PASSWORD:-${NEXUS_PASSWORD:-}}"
+        if [ -n "$RUBY_AUTH_USER" ] && [ -n "$RUBY_AUTH_PASS" ]; then
+            bundle config set --global "${RUBY_MIRROR_TARGET}" "${RUBY_AUTH_USER}:${RUBY_AUTH_PASS}" 2>/dev/null || true
+        fi
+    fi
+    if command -v gem >/dev/null 2>&1; then
+        gem sources --add "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
+        gem sources --remove https://rubygems.org/ 2>/dev/null || true
+    fi
 fi
 
 # ------------------------------------------------------------------------------
