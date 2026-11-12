@@ -1,0 +1,55 @@
+# ==============================================================================
+# GitLab CI Template for Android Projects (hateum/android-ci-box)
+# ==============================================================================
+
+image: hateum/android-ci-box:1.4.0
+
+variables:
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+cache:
+  key: "android-${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .gradle/caches/
+    - .gradle/wrapper/
+
+stages:
+  - lint
+  - test
+  - assemble
+
+before_script:
+  - ci-doctor --summary
+
+lint:
+  stage: lint
+  script:
+    - ./gradlew lintRelease --no-daemon
+  artifacts:
+    when: always
+    reports:
+      junit: "**/build/reports/lint-results*.xml"
+    paths:
+      - "**/build/reports/lint-results*.html"
+    expire_in: 7 days
+
+test:
+  stage: test
+  script:
+    - ./gradlew testReleaseUnitTest --no-daemon
+  artifacts:
+    when: always
+    reports:
+      junit: "**/build/test-results/**/*.xml"
+    expire_in: 7 days
+
+assemble:
+  stage: assemble
+  script:
+    - ./gradlew assembleRelease bundleRelease --no-daemon
+  artifacts:
+    paths:
+      - "**/build/outputs/apk/**/*.apk"
+      - "**/build/outputs/bundle/**/*.aab"
+    expire_in: 30 days

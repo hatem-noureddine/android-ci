@@ -67,6 +67,7 @@ The image provides specialized CLI utilities that you should leverage when autom
 | `detect-android-project` | `/usr/local/bin/detect-android-project` | Ultra-fast (<50ms) static scanner detecting compileSdk, buildToolsVersion, and Java toolchains. |
 | `switch-jdk` | `/usr/local/bin/switch-jdk [17\|21]` | Toggles between OpenJDK 17 and OpenJDK 21 dynamically. |
 | `install-sdk-version` | `/usr/local/bin/install-sdk-version <api>` | Installs older/preview SDK platforms using the new `android sdk` CLI with `sdkmanager` fallback. |
+| `install-ndk-version` | `/usr/local/bin/install-ndk-version <ndk> [cmake]` | Dynamically installs Android NDK and CMake with rootless universal permissions. |
 | `bundletool` | `/usr/local/bin/bundletool` | Standalone wrapper for Google's Bundletool 1.18.3. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | Official Google Android CLI (modern replacement for sdkmanager/avdmanager). |
 

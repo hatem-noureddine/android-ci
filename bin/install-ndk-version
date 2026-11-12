@@ -1,0 +1,85 @@
+#!/bin/bash
+# ==============================================================================
+# install-ndk-version: Dynamic Android NDK & CMake Installer
+# ==============================================================================
+set -euo pipefail
+
+TARGET="${1:-}"
+CMAKE_VERSION="${2:-}"
+
+if [ -z "$TARGET" ] || [ "$TARGET" = "--help" ] || [ "$TARGET" = "-h" ]; then
+    echo "Usage: install-ndk-version <ndk_version_or_package> [cmake_version]"
+    echo "Examples: install-ndk-version 27.2.12479018"
+    echo "          install-ndk-version 26.1.10909125 3.22.1"
+    echo "          install-ndk-version \"ndk;27.2.12479018\""
+    if [ "$TARGET" = "--help" ] || [ "$TARGET" = "-h" ]; then
+        exit 0
+    fi
+    exit 1
+fi
+
+ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
+ANDROID_CLI="${ANDROID_HOME}/cmdline-tools/latest/bin/android"
+SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+
+# Normalize NDK package string and folder name
+if [[ "$TARGET" == "ndk;"* ]]; then
+    NDK_PKG="$TARGET"
+    NDK_VERSION="${TARGET#ndk;}"
+else
+    NDK_PKG="ndk;${TARGET}"
+    NDK_VERSION="$TARGET"
+fi
+
+NDK_DIR="${ANDROID_HOME}/ndk/${NDK_VERSION}"
+
+# Check if already installed
+if [ -d "$NDK_DIR" ]; then
+    echo "✅ Android NDK ${NDK_VERSION} is already installed at ${NDK_DIR}."
+    export ANDROID_NDK_HOME="$NDK_DIR"
+    export ANDROID_NDK_ROOT="$NDK_DIR"
+    exit 0
+fi
+
+echo "⬇️  Installing Android NDK ${NDK_VERSION}..."
+
+# Pre-accept licenses safely
+if [ -x "$ANDROID_CLI" ]; then
+    printf 'y\n%.0s' {1..30} | "$ANDROID_CLI" sdk licenses >/dev/null 2>&1 || true
+elif [ -x "$SDKMANAGER" ]; then
+    printf 'y\n%.0s' {1..30} | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+fi
+
+install_package() {
+    local pkg="$1"
+    if [ -x "$ANDROID_CLI" ]; then
+        "$ANDROID_CLI" sdk install "$pkg" 2>/dev/null || "$SDKMANAGER" "$pkg"
+    elif [ -x "$SDKMANAGER" ]; then
+        "$SDKMANAGER" "$pkg"
+    else
+        echo "❌ Error: Neither 'android' CLI nor 'sdkmanager' was found in ${ANDROID_HOME}." >&2
+        exit 1
+    fi
+}
+
+install_package "$NDK_PKG"
+
+# Optional CMake installation
+if [ -n "$CMAKE_VERSION" ]; then
+    CMAKE_PKG="cmake;${CMAKE_VERSION}"
+    echo "⬇️  Installing Android CMake ${CMAKE_VERSION}..."
+    install_package "$CMAKE_PKG"
+fi
+
+# Ensure rootless universal permissions for all UIDs
+chmod -R 777 "${ANDROID_HOME}/ndk" 2>/dev/null || true
+if [ -d "${ANDROID_HOME}/cmake" ]; then
+    chmod -R 777 "${ANDROID_HOME}/cmake" 2>/dev/null || true
+fi
+
+# Set default symlink if not already pointing to a valid NDK
+if [ ! -L "${ANDROID_HOME}/ndk/default" ] && [ -d "$NDK_DIR" ]; then
+    ln -snf "$NDK_DIR" "${ANDROID_HOME}/ndk/default" 2>/dev/null || true
+fi
+
+echo "✅ Finished installing Android NDK ${NDK_VERSION}."

@@ -125,11 +125,12 @@ RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
     chmod -R 777 "${RBENV_ROOT}" && \
     rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
 
-# Layer 4: Install Latest Stable Gradle (9.8.2) Standalone
-RUN mkdir -p /opt/gradle && \
+# Layer 4: Install Latest Stable Gradle (9.8.2) Standalone & Global CI Optimizations
+RUN mkdir -p /opt/gradle /opt/gradle/init.d && \
     curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o /tmp/gradle.zip && \
     unzip -q /tmp/gradle.zip -d /opt/gradle && \
     ln -s "/opt/gradle/gradle-${GRADLE_VERSION}/bin/gradle" /usr/local/bin/gradle && \
+    printf "allprojects {\n    tasks.withType(JavaCompile).configureEach {\n        options.fork = true\n        options.encoding = 'UTF-8'\n    }\n}\ngradle.projectsLoaded {\n    rootProject.logger.info('⚡ [hateum/android-ci-box] CI Optimizations active: parallel=true, buildCache=true, daemon=false')\n}\n" > /opt/gradle/init.d/ci-optimizations.gradle && \
     rm -f /tmp/gradle.zip
 
 # Configure default JAVA_HOME, ANDROID_AVD_HOME and PATH (including Gradle and Android tools)
@@ -140,8 +141,9 @@ ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
+COPY bin/install-ndk-version /usr/local/bin/install-ndk-version
 COPY bin/detect-android-project /usr/local/bin/detect-android-project
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/detect-android-project
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
@@ -167,7 +169,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
-    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle /home/runner/.android/avd && \
+    mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle /home/runner/.android/avd "${ANDROID_HOME}/ndk" "${ANDROID_HOME}/cmake" && \
     chmod 777 /opt /opt/default-jdk 2>/dev/null || true && \
     chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
     find /opt -name "cacerts" -exec chmod 666 {} +
