@@ -52,7 +52,20 @@ def detect_project(project_dir="."):
     found_sdks = set()
     found_bts = set()
     found_javas = set()
+    found_agps = set()
     is_android = False
+
+    # Check Gradle Wrapper version if present
+    gradle_ver = None
+    wrapper_props = os.path.join(target_dir, "gradle", "wrapper", "gradle-wrapper.properties")
+    if os.path.isfile(wrapper_props):
+        try:
+            with open(wrapper_props, "r", encoding="utf-8", errors="ignore") as f:
+                m_gw = re.search(r"gradle-([0-9]+\.[0-9]+(?:\.[0-9]+)?)-", f.read())
+                if m_gw:
+                    gradle_ver = m_gw.group(1)
+        except Exception:
+            pass
 
     for fpath in candidates:
         try:
@@ -107,6 +120,14 @@ def detect_project(project_dir="."):
             except ValueError:
                 pass
 
+        # 4. Detect AGP (Android Gradle Plugin)
+        for m in re.finditer(r"com\.android\.(?:application|library)[\"']\s+version\s+[\"']([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[a-zA-Z0-9.]+)?);?[\"']", content):
+            found_agps.add(m.group(1))
+        for m in re.finditer(r"com\.android\.tools\.build:gradle:([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[a-zA-Z0-9.]+)?);?[\"']", content):
+            found_agps.add(m.group(1))
+        for m in re.finditer(r"(?:agp|androidGradlePlugin|android-gradle-plugin)\s*=\s*[\"']([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[a-zA-Z0-9.]+)?);?[\"']", content):
+            found_agps.add(m.group(1))
+
     compile_sdk = str(max(found_sdks)) if found_sdks else None
 
     build_tools = None
@@ -121,6 +142,25 @@ def detect_project(project_dir="."):
         build_tools = f"{compile_sdk}.0.0"
 
     java_ver = str(max(found_javas)) if found_javas else None
+
+    agp_ver = None
+    if found_agps:
+        def agp_key(v):
+            try:
+                clean_v = re.findall(r"[0-9]+", v)
+                return [int(x) for x in clean_v]
+            except Exception:
+                return [0, 0, 0]
+        agp_ver = max(found_agps, key=agp_key)
+
+    # Cross-compatibility check: Gradle < 8.5 is incompatible with Java 21
+    compat_note = None
+    if gradle_ver:
+        g_parts = [int(p) for p in re.findall(r"[0-9]+", gradle_ver)]
+        if len(g_parts) >= 2 and (g_parts[0] < 8 or (g_parts[0] == 8 and g_parts[1] < 5)):
+            if not java_ver or int(java_ver) > 17:
+                compat_note = f"Gradle Wrapper {gradle_ver} is incompatible with Java 21 (requires Gradle >= 8.5). Auto-adjusting to OpenJDK 17."
+                java_ver = "17"
 
     # Check local availability against container SDK/JDK folders
     android_home = os.environ.get("ANDROID_HOME", "/opt/android-sdk")
@@ -140,9 +180,12 @@ def detect_project(project_dir="."):
     return {
         "is_android": is_android,
         "project_dir": target_dir,
+        "gradle_version": gradle_ver,
+        "agp_version": agp_ver,
         "compile_sdk": compile_sdk,
         "build_tools": build_tools,
         "java_version": java_ver,
+        "compatibility_note": compat_note,
         "installed": {
             "compile_sdk": sdk_installed,
             "build_tools": bt_installed,
@@ -173,9 +216,13 @@ def main():
     else:
         print(f"Android Project       : {'Yes' if res['is_android'] else 'No'}")
         print(f"Project Directory     : {res['project_dir']}")
+        print(f"Gradle Wrapper        : {res['gradle_version'] or 'Not detected'}")
+        print(f"Android Gradle Plugin : {res['agp_version'] or 'Not detected'}")
         print(f"Target compileSdk     : {res['compile_sdk'] or 'Not detected'} (Installed: {'Yes' if res['installed']['compile_sdk'] else 'No'})")
         print(f"Target buildTools     : {res['build_tools'] or 'Not detected'} (Installed: {'Yes' if res['installed']['build_tools'] else 'No'})")
         print(f"Target Java Version   : {res['java_version'] or 'Not detected'} (Installed: {'Yes' if res['installed']['java_version'] else 'No'})")
+        if res.get("compatibility_note"):
+            print(f"Compatibility Note    : {res['compatibility_note']}")
 
 if __name__ == "__main__":
     main()

@@ -305,10 +305,14 @@ echo ""
 echo -e "${BOLD}7. Mounted Android Project Inspection${RESET}"
 IS_PROJ=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('is_android', False))" 2>/dev/null || echo "False")
 if [ "$IS_PROJ" = "True" ]; then
+    P_GW=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('gradle_version') or 'Not detected')" 2>/dev/null || echo "Not detected")
+    P_AGP=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('agp_version') or 'Not detected')" 2>/dev/null || echo "Not detected")
     P_SDK=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('compile_sdk') or 'Unknown')" 2>/dev/null || echo "Unknown")
     P_BT=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('build_tools') or 'Unknown')" 2>/dev/null || echo "Unknown")
     P_JV=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('java_version') or 'Unknown')" 2>/dev/null || echo "Unknown")
     echo -e "  Android Project : ${GREEN}Detected in ${PROJ_SCAN_DIR}${RESET}"
+    echo -e "  Gradle Wrapper  : ${CYAN}${P_GW}${RESET}"
+    echo -e "  AGP Plugin      : ${CYAN}${P_AGP}${RESET}"
     echo -e "  Target SDK      : ${CYAN}${P_SDK}${RESET}"
     echo -e "  Build Tools     : ${CYAN}${P_BT}${RESET}"
     echo -e "  Target Java     : ${CYAN}${P_JV}${RESET}"

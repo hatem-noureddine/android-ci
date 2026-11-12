@@ -324,12 +324,13 @@ jobs:
       - name: Update Docker Hub Description & Overview
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
         uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ env.IMAGE_NAME }}
           readme-filepath: ./README.md
-          short-description: "High-performance, rootless Android CI/CD image with AGP 9.x, Android SDK 35/36/37, JDK 17/21, Fastlane 2.241.2, GMD & Auto-Detection."
+          short-description: "Fast, rootless Android CI/CD image with AGP 9.x, SDK 35/36/37, JDK 17/21, GMD & Auto-Detection."
 
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
