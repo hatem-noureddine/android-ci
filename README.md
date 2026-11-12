@@ -218,27 +218,13 @@ The image provides native, out-of-the-box support for **Gradle Managed Devices (
 ```groovy
 android {
     testOptions {
-        animationsDisabled = true // Disables UI animations for faster and flake-free tests
+        animationsDisabled = true
         managedDevices {
             allDevices {
-                // Standard smartphone (Android 15 / API 35) with lightweight Google ATD image
                 pixel8api35(com.android.build.api.dsl.ManagedVirtualDevice) {
                     device = "Pixel 8"
                     apiLevel = 35
                     systemImageSource = "google-atd"
-                }
-
-                // Foldable device (Android 16 / API 36)
-                foldableApi36(com.android.build.api.dsl.ManagedVirtualDevice) {
-                    device = "7.6in Foldable"
-                    apiLevel = 36
-                    systemImageSource = "google"
-                }
-            }
-            groups {
-                allFormFactors {
-                    targetDevices.add(allDevices.pixel8api35)
-                    targetDevices.add(allDevices.foldableApi36)
                 }
             }
         }
@@ -248,17 +234,8 @@ android {
 
 ### Execution Commands in CI
 ```bash
-# Run tests on the standard Pixel 8 emulator
 docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
   ./gradlew pixel8api35DebugAndroidTest
-
-# Run tests on the 7.6in Foldable screen
-docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
-  ./gradlew foldableApi36DebugAndroidTest
-
-# Run tests across all configured form-factors
-docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
-  ./gradlew allFormFactorsGroupDebugAndroidTest
 ```
 
 ---
@@ -295,48 +272,10 @@ The image is tested and pre-optimized for all major enterprise CI/CD runners. Re
 | **Bitbucket Pipelines** | [`examples/ci/bitbucket-pipelines.yml`](examples/ci/bitbucket-pipelines.yml) | [`references/bitbucket-pipelines.md`](.agents/skills/android-ci-box/references/bitbucket-pipelines.md) | Custom Docker container execution, 2x resource sizing, wrapper caches |
 | **CircleCI** | [`examples/ci/circleci-config.yml`](examples/ci/circleci-config.yml) | [`references/circleci.md`](.agents/skills/android-ci-box/references/circleci.md) | Docker executor, `xlarge` resource class, `store_test_results` |
 
-### Quick Pipeline Snippets:
+### Pipeline Quick Examples:
 
-<details>
-<summary><b>1. GitLab CI/CD (<code>.gitlab-ci.yml</code>)</b></summary>
-
+**GitHub Actions (`.github/workflows/android.yml`)**:
 ```yaml
-default:
-  image: hateum/android-ci-box:latest
-  before_script:
-    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - .gradle/caches/
-      - .gradle/wrapper/
-
-stages: [ test, build ]
-
-unit_tests:
-  stage: test
-  script:
-    - ci-doctor --summary
-    - ./gradlew lintRelease testReleaseUnitTest check --no-daemon
-
-build_apk:
-  stage: build
-  script:
-    - ./gradlew assembleRelease bundleRelease --no-daemon
-  artifacts:
-    paths:
-      - app/build/outputs/apk/release/*.apk
-      - app/build/outputs/bundle/release/*.aab
-```
-</details>
-
-<details>
-<summary><b>2. GitHub Actions (<code>.github/workflows/android.yml</code>)</b></summary>
-
-```yaml
-name: Android CI Build
-on: [push, pull_request]
-
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -345,43 +284,23 @@ jobs:
       options: --user 1000:0
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
       - run: ci-doctor --summary
       - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
-      - name: Deploy with Fastlane (Optional)
-        run: bundle exec fastlane deploy
-        env:
-          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY }}
 ```
-</details>
 
-<details>
-<summary><b>3. Jenkins (<code>Jenkinsfile</code>)</b></summary>
-
-```groovy
-pipeline {
-    agent {
-        docker {
-            image 'hateum/android-ci-box:latest'
-            args '-v /dev/kvm:/dev/kvm --user 1000:0'
-        }
-    }
-    stages {
-        stage('Build & Test') {
-            steps {
-                sh 'ci-doctor --summary'
-                sh './gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon'
-            }
-        }
-    }
-}
+**GitLab CI/CD (`.gitlab-ci.yml`)**:
+```yaml
+build:
+  image: hateum/android-ci-box:latest
+  script:
+    - ci-doctor --summary
+    - ./gradlew assembleRelease bundleRelease --no-daemon
+  artifacts:
+    paths:
+      - app/build/outputs/apk/release/*.apk
+      - app/build/outputs/bundle/release/*.aab
 ```
-</details>
+*See [`examples/ci/`](examples/ci/) for complete Jenkins, Bitbucket, and CircleCI configurations.*
 
 ---
 

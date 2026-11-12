@@ -77,12 +77,25 @@ if [ -n "$REQ_JAVA" ]; then
     fi
 fi
 
+# Fast 2s network reachability probe (prevents CI hangs in air-gapped environments)
+can_reach_network() {
+    local probe_target="https://dl.google.com"
+    if [ -n "${NEXUS_URL:-}" ]; then
+        probe_target="${NEXUS_URL}"
+    fi
+    curl -s -m 2 -o /dev/null "$probe_target" 2>/dev/null
+}
+
 # Apply / Install Android SDK Platform
 if [ -n "$REQ_SDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/platforms/android-${REQ_SDK}" ]; then
-        echo "⬇️  [sdk] Android platform android-${REQ_SDK} not present. Auto-installing..."
-        if command -v install-sdk-version >/dev/null 2>&1; then
-            install-sdk-version "$REQ_SDK" >/dev/null 2>&1 || true
+        if can_reach_network; then
+            echo "⬇️  [sdk] Android platform android-${REQ_SDK} not present. Auto-installing..."
+            if command -v install-sdk-version >/dev/null 2>&1; then
+                install-sdk-version "$REQ_SDK" >/dev/null 2>&1 || true
+            fi
+        else
+            echo "⚠️  [sdk] Android platform android-${REQ_SDK} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
         fi
     fi
 fi
@@ -90,9 +103,13 @@ fi
 # Apply / Install Android Build-Tools
 if [ -n "$REQ_BUILD_TOOLS" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/build-tools/${REQ_BUILD_TOOLS}" ]; then
-        echo "⬇️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} not present. Auto-installing..."
-        if command -v install-sdk-version >/dev/null 2>&1; then
-            install-sdk-version "$REQ_BUILD_TOOLS" >/dev/null 2>&1 || true
+        if can_reach_network; then
+            echo "⬇️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} not present. Auto-installing..."
+            if command -v install-sdk-version >/dev/null 2>&1; then
+                install-sdk-version "$REQ_BUILD_TOOLS" >/dev/null 2>&1 || true
+            fi
+        else
+            echo "⚠️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
         fi
     fi
 fi
