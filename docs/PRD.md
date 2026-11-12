@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## hateum/android-ci-box: The Autonomous Enterprise-Grade Android CI/CD Container
 
-- **Document Version**: 1.2.0
+- **Document Version**: 1.3.1
 - **Status**: Approved & In Production
 - **Owner**: Hatem Noureddine (`hateum`)
 - **Registries**: Docker Hub (`hateum/android-ci-box`) & GHCR (`ghcr.io/hatem-noureddine/android-ci-box`)
@@ -50,11 +50,20 @@ Android CI/CD engineering traditionally suffers from four acute pain points:
 - **Requirement 3.2 (Dual-JDK Switching)**: Support instant switching between OpenJDK 21 (default) and OpenJDK 17 via `switch-jdk`.
 - **Requirement 3.3 (AGP 9.x & SDK 37 Compatibility)**: Ensure out-of-the-box support for the latest Android Gradle Plugin (AGP 9.4.1), Gradle 9.8.2, Kotlin 2.4.20, and Android SDK APIs 35, 36, and 37.
 
+### 3.4 Modern Ruby & Fastlane Deployment Automation
+- **Requirement 4.1 (Ruby 4.0 & Fastlane 2.241.2)**: Embed isolated, modern Ruby 4.0.9 via rbenv with Bundler 4.0.23 and Fastlane 2.241.2 in universal read/write permissions (`777`).
+- **Requirement 4.2 (Zero-Friction Non-Root Execution)**: Ensure rootless runners (UID 1000:0 and arbitrary UIDs) can run `fastlane`, `bundle exec`, and install ephemeral gems without permission failures.
+
+### 3.5 Distributed Native Multi-Architecture Pipeline
+- **Requirement 5.1 (Hardware-Native Builds)**: Build `linux/amd64` and `linux/arm64` simultaneously on native GitHub Actions runners (`ubuntu-24.04` and `ubuntu-24.04-arm`) with zero QEMU software emulation.
+- **Requirement 5.2 (OCI Manifest Merging)**: Merge platform digests into multi-arch manifest lists via `docker buildx imagetools create` with release pipeline completion in `< 10 minutes`.
+
 ---
 
 ## 4. Service Level Objectives (SLOs) & Quality Standards
 
 - **Build Time Target**: Android sample project release compilation and unit testing in `< 45 seconds` on warm CI cache.
-- **Security Vulnerability SLA**: **Zero unfixed critical CVEs** enforced on every build via Trivy scanning.
+- **Multi-Arch Release SLA**: Full container build, multi-arch matrix testing, and release tagging in `< 10 minutes`.
+- **Security Vulnerability SLA**: **Zero unfixed critical CVEs** enforced on every build via Trivy scanning. Upstream false-positives (such as default bundled gems overridden by updated versions) must be formally documented with full CVE justification in `.trivyignore`.
 - **Static Analysis Gates**: **Zero warnings** across ShellCheck, Hadolint, and Actionlint.
 - **Cross-Platform Availability**: 100% parity between `linux/amd64` and `linux/arm64` for application compilation and unit tests.

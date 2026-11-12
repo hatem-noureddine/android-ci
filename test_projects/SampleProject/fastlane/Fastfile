@@ -16,6 +16,11 @@
 default_platform(:android)
 
 platform :android do
+  desc "Fastlane CI Verification Lane"
+  lane :test_ci do
+    UI.message("Fastlane CI Verification Lane running successfully in hateum/android-ci-box!")
+  end
+
   desc "Build project"
   lane :build do
     gradle(task: "build")

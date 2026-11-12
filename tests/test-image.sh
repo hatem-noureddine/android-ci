@@ -170,6 +170,7 @@ echo -e "${GREEN}✔ Android compilation, lint & instrumentation build test pass
 # Test 7: Fastlane Test Lane Execution
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}[Test 7/7] Executing Fastlane test lane...${RESET}"
+bundle exec fastlane android test_ci
 bundle exec fastlane test
 echo -e "${GREEN}✔ Fastlane test lane executed successfully!${RESET}\n"
 
