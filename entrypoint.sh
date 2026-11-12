@@ -11,6 +11,110 @@ GRADLE_DIR="${GRADLE_USER_HOME:-/home/runner/.gradle}"
 mkdir -p "$GRADLE_DIR" "$GRADLE_DIR/init.d" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
+# 0. CI Environment Version Customization & Dynamic Project Auto-Detection
+# ------------------------------------------------------------------------------
+REQ_JAVA="${JAVA_VERSION:-${DEFAULT_JDK:-}}"
+REQ_SDK="${INSTALL_SDK_VERSION:-${ANDROID_COMPILE_SDK:-}}"
+REQ_BUILD_TOOLS="${INSTALL_BUILD_TOOLS:-${ANDROID_BUILD_TOOLS_VERSION:-}}"
+
+# If any variable is missing and AUTO_DETECT_PROJECT != false, auto-detect from project
+if [ "${AUTO_DETECT_PROJECT:-true}" != "false" ] && command -v detect-android-project >/dev/null 2>&1; then
+    PROJ_DIR="${PROJECT_DIR:-$(pwd)}"
+    if [ ! -f "$PROJ_DIR/build.gradle" ] && [ ! -f "$PROJ_DIR/build.gradle.kts" ] && [ -d "/project" ]; then
+        if [ -f "/project/build.gradle" ] || [ -f "/project/build.gradle.kts" ] || [ -f "/project/app/build.gradle" ] || [ -f "/project/app/build.gradle.kts" ]; then
+            PROJ_DIR="/project"
+        fi
+    fi
+
+    DETECTION_JSON=$(detect-android-project "$PROJ_DIR" --json 2>/dev/null || echo "{}")
+    IS_PROJ_ANDROID=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('is_android', False))" 2>/dev/null || echo "False")
+
+    if [ "$IS_PROJ_ANDROID" = "True" ]; then
+        # Auto-detect Java if not explicitly set
+        if [ -z "$REQ_JAVA" ]; then
+            DETECTED_JAVA=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('java_version') or '')" 2>/dev/null || echo "")
+            if [ -n "$DETECTED_JAVA" ]; then
+                echo "ℹ️  [auto-detect] Detected Java version $DETECTED_JAVA from project configuration"
+                REQ_JAVA="$DETECTED_JAVA"
+            fi
+        fi
+
+        # Auto-detect SDK Platform if not explicitly set
+        if [ -z "$REQ_SDK" ]; then
+            DETECTED_SDK=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('compile_sdk') or '')" 2>/dev/null || echo "")
+            if [ -n "$DETECTED_SDK" ]; then
+                echo "ℹ️  [auto-detect] Detected Android compileSdk $DETECTED_SDK from project configuration"
+                REQ_SDK="$DETECTED_SDK"
+            fi
+        fi
+
+        # Auto-detect Build Tools if not explicitly set
+        if [ -z "$REQ_BUILD_TOOLS" ]; then
+            DETECTED_BT=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('build_tools') or '')" 2>/dev/null || echo "")
+            if [ -n "$DETECTED_BT" ]; then
+                echo "ℹ️  [auto-detect] Detected Android buildToolsVersion $DETECTED_BT from project configuration"
+                REQ_BUILD_TOOLS="$DETECTED_BT"
+            fi
+        fi
+    fi
+fi
+
+# Apply Java Version
+if [ -n "$REQ_JAVA" ]; then
+    if [ "$REQ_JAVA" = "17" ] || [ "$REQ_JAVA" = "21" ]; then
+        export JAVA_HOME="/opt/jdk-${REQ_JAVA}"
+        if command -v switch-jdk >/dev/null 2>&1; then
+            # shellcheck source=/dev/null
+            source switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || true
+        fi
+    elif [ "$REQ_JAVA" -lt 17 ] 2>/dev/null; then
+        echo "⚠️  [warning] Java $REQ_JAVA is deprecated for AGP 8+/9+. Switching to minimum supported OpenJDK 17."
+        export JAVA_HOME="/opt/jdk-17"
+        if command -v switch-jdk >/dev/null 2>&1; then
+            # shellcheck source=/dev/null
+            source switch-jdk 17 >/dev/null 2>&1 || switch-jdk 17 >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# Fast 2s network reachability probe (prevents CI hangs in air-gapped environments)
+can_reach_network() {
+    local probe_target="https://dl.google.com"
+    if [ -n "${NEXUS_URL:-}" ]; then
+        probe_target="${NEXUS_URL}"
+    fi
+    curl -s -m 2 -o /dev/null "$probe_target" 2>/dev/null
+}
+
+# Apply / Install Android SDK Platform
+if [ -n "$REQ_SDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
+    if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/platforms/android-${REQ_SDK}" ]; then
+        if can_reach_network; then
+            echo "⬇️  [sdk] Android platform android-${REQ_SDK} not present. Auto-installing..."
+            if command -v install-sdk-version >/dev/null 2>&1; then
+                install-sdk-version "$REQ_SDK" >/dev/null 2>&1 || true
+            fi
+        else
+            echo "⚠️  [sdk] Android platform android-${REQ_SDK} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
+        fi
+    fi
+fi
+
+# Apply / Install Android Build-Tools
+if [ -n "$REQ_BUILD_TOOLS" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
+    if [ ! -d "${ANDROID_HOME:-/opt/android-sdk}/build-tools/${REQ_BUILD_TOOLS}" ]; then
+        if can_reach_network; then
+            echo "⬇️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} not present. Auto-installing..."
+            if command -v install-sdk-version >/dev/null 2>&1; then
+                install-sdk-version "$REQ_BUILD_TOOLS" >/dev/null 2>&1 || true
+            fi
+        else
+            echo "⚠️  [sdk] Android build-tools ${REQ_BUILD_TOOLS} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
+        fi
+    fi
+fi
+
+# ------------------------------------------------------------------------------
 # 1. Gradle CI Performance Optimization Defaults
 # ------------------------------------------------------------------------------
 GRADLE_PROP_FILE="$GRADLE_DIR/gradle.properties"
@@ -211,7 +315,7 @@ fi
 # ------------------------------------------------------------------------------
 AVD_DIR="${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
 mkdir -p /builds /project /certificates "$AVD_DIR" 2>/dev/null || true
-chmod 777 /builds /project /certificates 2>/dev/null || true
+chmod 777 /opt /opt/default-jdk /builds /project /certificates 2>/dev/null || true
 chmod -R 777 "$GRADLE_DIR" "$AVD_DIR" 2>/dev/null || true
 if [ -e /dev/kvm ] && [ "$(id -u)" -eq 0 ]; then
     chmod 666 /dev/kvm 2>/dev/null || true

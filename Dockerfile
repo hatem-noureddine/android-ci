@@ -140,7 +140,8 @@ ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version
+COPY bin/detect-android-project /usr/local/bin/detect-android-project
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/detect-android-project
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
@@ -167,6 +168,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \
     chmod +x /usr/local/bin/bundletool && \
     mkdir -p /builds /project /certificates /usr/local/share/ca-certificates /home/runner/.gradle /home/runner/.android/avd && \
+    chmod 777 /opt /opt/default-jdk 2>/dev/null || true && \
     chmod -R 777 "${ANDROID_HOME}" /opt/gradle /home/runner /builds /project /certificates /usr/local/share/ca-certificates && \
     find /opt -name "cacerts" -exec chmod 666 {} +
 

@@ -1,0 +1,182 @@
+#!/bin/bash
+# ==============================================================================
+# detect-android-project: Fast Static Analyzer for Android CI Requirements
+# ==============================================================================
+set -euo pipefail
+
+python3 - "$@" << 'PYEOF'
+import sys
+import os
+import re
+import json
+
+def detect_project(project_dir="."):
+    target_dir = os.path.abspath(project_dir)
+    if not os.path.isdir(target_dir):
+        return {
+            "is_android": False,
+            "project_dir": target_dir,
+            "compile_sdk": None,
+            "build_tools": None,
+            "java_version": None,
+            "error": "Directory does not exist"
+        }
+
+    # Discover candidate build files (shallow inspection, ignore hidden and build folders)
+    candidates = []
+    for root, dirs, fnames in os.walk(target_dir):
+        # Exclude common build & cache directories to keep discovery < 30ms
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("build", ".gradle", "node_modules", "fastlane", ".git")]
+        rel_depth = os.path.relpath(root, target_dir).count(os.sep)
+        if rel_depth > 3:
+            dirs.clear()
+            continue
+        for f in fnames:
+            if f.endswith((".gradle", ".gradle.kts", ".toml", ".properties")):
+                candidates.append(os.path.join(root, f))
+
+    # Prioritize app module files first, then root build files
+    def sort_priority(filepath):
+        basename = os.path.basename(filepath)
+        score = 10
+        if "app" in filepath.split(os.sep):
+            score -= 5
+        if basename in ("build.gradle.kts", "build.gradle"):
+            score -= 3
+        elif basename == "libs.versions.toml":
+            score -= 2
+        return (score, filepath)
+
+    candidates.sort(key=sort_priority)
+
+    found_sdks = set()
+    found_bts = set()
+    found_javas = set()
+    is_android = False
+
+    for fpath in candidates:
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+        except Exception:
+            continue
+
+        if any(marker in content for marker in ("com.android", "android {", "androidExtension", "com.android.tools")):
+            is_android = True
+
+        # 1. Detect compileSdk / compileSdkVersion
+        for m in re.finditer(r"(?:compileSdk|compileSdkVersion)\s*(?:=|\s)\s*\(?([0-9]{2,3})\)?", content):
+            try:
+                found_sdks.add(int(m.group(1)))
+            except ValueError:
+                pass
+        for m in re.finditer(r"(?:compileSdk|android-compileSdk|androidCompileSdk)\s*=\s*[\"']([0-9]{2,3})[\"']", content):
+            try:
+                found_sdks.add(int(m.group(1)))
+            except ValueError:
+                pass
+
+        # 2. Detect buildToolsVersion
+        for m in re.finditer(r"buildToolsVersion\s*(?:=|\s)\s*\(?[\"']([0-9]+\.[0-9]+\.[0-9]+)[\"']\)?", content):
+            found_bts.add(m.group(1))
+        for m in re.finditer(r"(?:buildTools|buildToolsVersion|android-buildTools)\s*=\s*[\"']([0-9]+\.[0-9]+\.[0-9]+)[\"']", content):
+            found_bts.add(m.group(1))
+
+        # 3. Detect Java / jvmToolchain
+        for m in re.finditer(r"jvmToolchain\s*\(?\s*([0-9]+)\s*\)?", content):
+            try:
+                found_javas.add(int(m.group(1)))
+            except ValueError:
+                pass
+        for m in re.finditer(r"JavaVersion\.VERSION_([0-9]+)", content):
+            val = m.group(1)
+            if val == "1_8":
+                val = "8"
+            try:
+                found_javas.add(int(val))
+            except ValueError:
+                pass
+        for m in re.finditer(r"JavaLanguageVersion\.of\(\s*([0-9]+)\s*\)", content):
+            try:
+                found_javas.add(int(m.group(1)))
+            except ValueError:
+                pass
+        for m in re.finditer(r"(?:jvmTarget|javaVersion|jvmToolchain)\s*=\s*[\"']([0-9]+)[\"']", content):
+            try:
+                found_javas.add(int(m.group(1)))
+            except ValueError:
+                pass
+
+    compile_sdk = str(max(found_sdks)) if found_sdks else None
+
+    build_tools = None
+    if found_bts:
+        def bt_key(v):
+            try:
+                return [int(x) for x in v.split(".")]
+            except Exception:
+                return [0, 0, 0]
+        build_tools = max(found_bts, key=bt_key)
+    elif compile_sdk:
+        build_tools = f"{compile_sdk}.0.0"
+
+    java_ver = str(max(found_javas)) if found_javas else None
+
+    # Check local availability against container SDK/JDK folders
+    android_home = os.environ.get("ANDROID_HOME", "/opt/android-sdk")
+    sdk_installed = False
+    if compile_sdk:
+        sdk_installed = os.path.isdir(os.path.join(android_home, "platforms", f"android-{compile_sdk}"))
+
+    bt_installed = False
+    if build_tools:
+        bt_installed = os.path.isdir(os.path.join(android_home, "build-tools", build_tools))
+
+    java_installed = False
+    if java_ver:
+        if java_ver in ("17", "21") and os.path.isdir(f"/opt/jdk-{java_ver}"):
+            java_installed = True
+
+    return {
+        "is_android": is_android,
+        "project_dir": target_dir,
+        "compile_sdk": compile_sdk,
+        "build_tools": build_tools,
+        "java_version": java_ver,
+        "installed": {
+            "compile_sdk": sdk_installed,
+            "build_tools": bt_installed,
+            "java_version": java_installed
+        }
+    }
+
+def main():
+    args = sys.argv[1:]
+    mode = "text"
+    project_dir = "."
+
+    if "--help" in args or "-h" in args:
+        print("Usage: detect-android-project [PROJECT_DIR] [--json|-j|--summary|-s|-h]")
+        print("Scans Android Gradle project configurations and outputs required SDK and Java versions.")
+        sys.exit(0)
+
+    for arg in args:
+        if arg in ("--json", "-j", "--summary", "-s"):
+            mode = "json"
+        elif not arg.startswith("-"):
+            project_dir = arg
+
+    res = detect_project(project_dir)
+
+    if mode == "json":
+        print(json.dumps(res, indent=2))
+    else:
+        print(f"Android Project       : {'Yes' if res['is_android'] else 'No'}")
+        print(f"Project Directory     : {res['project_dir']}")
+        print(f"Target compileSdk     : {res['compile_sdk'] or 'Not detected'} (Installed: {'Yes' if res['installed']['compile_sdk'] else 'No'})")
+        print(f"Target buildTools     : {res['build_tools'] or 'Not detected'} (Installed: {'Yes' if res['installed']['build_tools'] else 'No'})")
+        print(f"Target Java Version   : {res['java_version'] or 'Not detected'} (Installed: {'Yes' if res['installed']['java_version'] else 'No'})")
+
+if __name__ == "__main__":
+    main()
+PYEOF

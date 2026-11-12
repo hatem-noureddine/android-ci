@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## hateum/android-ci-box: The Autonomous Enterprise-Grade Android CI/CD Container
 
-- **Document Version**: 1.3.1
+- **Document Version**: 1.3.2
 - **Status**: Approved & In Production
 - **Owner**: Hatem Noureddine (`hateum`)
 - **Registries**: Docker Hub (`hateum/android-ci-box`) & GHCR (`ghcr.io/hatem-noureddine/android-ci-box`)

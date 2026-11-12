@@ -113,7 +113,7 @@ jobs:
             -v "${{ github.workspace }}":/project \
             -w /project \
             ${{ env.IMAGE_NAME }}:test \
-            ci-doctor
+            bash -c "ci-doctor --json && switch-jdk 17 && switch-jdk 21"
 
       - name: Test Arbitrary UID Execution (UID 1001:1001)
         run: |
@@ -122,7 +122,7 @@ jobs:
             -v "${{ github.workspace }}":/project \
             -w /project \
             ${{ env.IMAGE_NAME }}:test \
-            ci-doctor
+            bash -c "ci-doctor --json && switch-jdk 17 && switch-jdk 21"
 
   # ============================================================================
   # Job 3: Native Multi-Arch Parallel Build Matrix (amd64 on x86, arm64 on arm)
@@ -320,6 +320,16 @@ jobs:
           docker buildx imagetools create "${GHCR_TAG_ARGS[@]}" \
             "ghcr.io/${{ github.repository }}:${VERSION}-amd64" \
             "ghcr.io/${{ github.repository }}:${VERSION}-arm64"
+
+      - name: Update Docker Hub Description & Overview
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.IMAGE_NAME }}
+          readme-filepath: ./README.md
+          short-description: "High-performance, rootless Android CI/CD image with AGP 9.x, Android SDK 35/36/37, JDK 17/21, Fastlane 2.241.2, GMD & Auto-Detection."
 
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
