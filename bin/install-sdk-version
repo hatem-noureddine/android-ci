@@ -2,10 +2,13 @@
 set -euo pipefail
 
 TARGET="${1:-}"
-if [ -z "$TARGET" ]; then
+if [ -z "$TARGET" ] || [ "$TARGET" = "--help" ] || [ "$TARGET" = "-h" ]; then
   echo "Usage: install-sdk-version <platform_number_or_package>"
   echo "Examples: install-sdk-version 37"
   echo "          install-sdk-version \"platforms;android-34\""
+  if [ "$TARGET" = "--help" ] || [ "$TARGET" = "-h" ]; then
+    exit 0
+  fi
   exit 1
 fi
 

@@ -105,7 +105,8 @@ fi
 
 # Verify install-sdk-version CLI usage
 echo "Verifying install-sdk-version CLI interface..."
-if install-sdk-version 2>&1 | grep -q "Usage: install-sdk-version"; then
+SDK_USAGE=$(install-sdk-version --help 2>&1 || true)
+if echo "$SDK_USAGE" | grep -q "Usage: install-sdk-version"; then
     echo -e "${GREEN}✔ install-sdk-version CLI interface verified!${RESET}"
 else
     echo -e "${RED}✘ install-sdk-version CLI failed argument check!${RESET}"
