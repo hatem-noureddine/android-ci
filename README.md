@@ -1,351 +1,141 @@
 # Android CI/CD Build Box (`hateum/android-ci-box`)
 
-[![Docker Hub](https://img.shields.io/docker/pulls/hateum/android-ci-box?style=flat-square&logo=docker)](https://hub.docker.com/r/hateum/android-ci-box)
-[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io%2Fhateum-2088FF?style=flat-square&logo=github)](https://github.com/hatem-noureddine/android-ci/pkgs/container/android-ci)
-[![Docker Image Size](https://img.shields.io/docker/image-size/hateum/android-ci-box/latest?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
+[![Docker Hub](https://img.shields.io/docker/pulls/hateum/android-ci-box?style=flat-square&logo=docker&color=0088ff)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Multi-Arch](https://img.shields.io/badge/architecture-amd64%20%7C%20arm64-blue?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
-[![Gradle Version](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
+[![Security](https://img.shields.io/badge/Trivy%20Audit-0%20Critical%20CVEs-brightgreen?style=flat-square&logo=security)](https://github.com/hatem-noureddine/android-ci/security)
+[![Gradle](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-API%2035%20%7C%2036%20%7C%2037-34A853?style=flat-square&logo=android)](https://developer.android.com)
 [![Java](https://img.shields.io/badge/OpenJDK-17%20%7C%2021%20(Default)-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org)
 [![Fastlane](https://img.shields.io/badge/Fastlane-2.241.2-00F?style=flat-square&logo=fastlane)](https://fastlane.tools)
-[![Ruby](https://img.shields.io/badge/Ruby-4.0.9%20(rbenv)-CC342D?style=flat-square&logo=ruby)](https://www.ruby-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-A modern, high-performance, and hardened Docker image engineered for **Android Continuous Integration and Delivery (CI/CD)** pipelines across **GitHub Actions**, **GitLab Runner**, **Jenkins**, and **Bitbucket Pipelines**.
+A battle-tested, high-performance, and rootless Docker container engineered for **Android CI/CD automation** across **GitHub Actions**, **GitLab CI**, **Jenkins**, and **Bitbucket Pipelines**.
 
-It features an intelligent **dual-mode universal network engine** that works instantly out-of-the-box on the **public Internet** while automatically adapting to **secured enterprise intranet environments** (Nexus/Artifactory mirrors, SSL inspection with custom CA certificates, and HTTP/HTTPS corporate proxies).
-
----
-
-## 🏛️ Image Architecture & Stack Overview
-
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                       hateum/android-ci-box:latest                            │
-├───────────────────────────────────────────────────────────────────────────────┤
-│  Base OS            : Ubuntu 24.04 LTS (Noble) | Multi-Arch: amd64 / arm64    │
-├───────────────────────────────────────────────────────────────────────────────┤
-│  ☕ Java Runtimes    : OpenJDK 21 (Default) + OpenJDK 17 (Instant switch)      │
-│  🐘 Gradle Engine   : Gradle 9.8.2 (Standalone & Wrapper Support)             │
-│  📱 Android SDK & CLI : APIs 35, 36, 37 + Google Android CLI ('android')      │
-│  🎮 Emulator Engine  : Android SDK Headless Emulator + SwiftShader GPU        │
-│  🚀 Deployment Tools: Fastlane 2.241.2, Bundletool 1.18.3, GitHub CLI (gh)    │
-│  💎 Ruby & Gems      : Ruby 4.0.9 (rbenv, /opt/rbenv), Bundler 4.0.23          │
-│  🐍 CI Tooling       : Python 3 & Pip (No PEP 668 restriction)                 │
-│  🩺 Health Diagnostic: Built-in 'ci-doctor' & 'detect-android-project' CLI    │
-├───────────────────────────────────────────────────────────────────────────────┤
-│                      🌐 DUAL-MODE UNIVERSAL NETWORK ENGINE                    │
-│  Mode 1 (Public)    : Direct unthrottled access to Google & Maven Central     │
-│  Mode 2 (Enterprise): Auto-imported CA SSL + Auto Proxy + Nexus/Artifactory   │
-├───────────────────────────────────────────────────────────────────────────────┤
-│                      🛡️ ROOT & HARDENED NON-ROOT SECURITY                     │
-│  Full arbitrary UID support (OpenShift, Kubernetes, hardened UID 1000:0)      │
-└───────────────────────────────────────────────────────────────────────────────┘
-```
+Features a **dual-mode network engine** (public internet & enterprise intranet with auto-proxy, custom CA certificates, and Nexus mirrors), **native multi-arch compilation** (`amd64` and `arm64`), and **zero-config dynamic auto-detection** of project SDK and Java toolchains.
 
 ---
 
-## ⚡ Quick Start in 60 Seconds
+## ⚖️ Why `hateum/android-ci-box`? (Feature Comparison)
 
-### 1. Build an Android App Locally (Zero-Config One-Liner)
-Mount your local Android project repository to `/project`:
+| Capability | Standard Android CI Images | `hateum/android-ci-box` |
+| :--- | :--- | :--- |
+| **Silicon Architecture** | `x86_64` only (Emulated on ARM via slow QEMU) | **Native Multi-Arch (`amd64` + `arm64`)** (Full native silicon speed on Apple Silicon & AWS Graviton) |
+| **Project Setup** | Manual SDK/JDK setup scripts per repo | **Zero-Config Dynamic Auto-Detection** (`compileSdk`, `buildTools`, Java 17/21) in <50ms |
+| **Java Runtimes** | Single JDK version (fixed at build time) | **Dual-JDK (OpenJDK 21 + 17)** with instant CLI/Env toggle (`switch-jdk`) |
+| **Security & Permissions**| Hardcoded `root` (fails on OpenShift/K8s) | **Universal Rootless (777 permissions)**, runs safely under any UID (`1000:0`, `1001:1001`) |
+| **Vulnerability Audit** | Often contains unpatched high/critical CVEs | **Zero Unfixed Critical CVEs** (strictly audited via Trivy SARIF gates) |
+| **Enterprise Network** | Custom Dockerfiles required for proxies & certs | **Auto-imported CA certs, automatic HTTP proxy & Nexus/Artifactory mirror derivation** |
+| **Deployment Tools** | Slow `gem install fastlane` on every build | **Precompiled Ruby 4.0.9 + Fastlane 2.241.2** ready out-of-the-box in `/opt/rbenv` |
+| **Testing & Emulation** | Complex X11/VNC setup or broken display | **Native Gradle Managed Devices (GMD)** with SwiftShader Headless GPU acceleration |
+| **Health Diagnostics** | No diagnostic tooling | **Built-in `ci-doctor` & `detect-android-project`** CLI utilities with JSON reporting |
+
+---
+
+## 🏛️ Architecture & 6-Tier Dependency Schema
+
+```
++-----------------------------------------------------------------------------------------+
+|                        Tier 1: Base Operating System (Ubuntu 24.04 LTS)                 |
+|             Native Multi-Arch Matrix: linux/amd64 (x86_64) | linux/arm64 (aarch64)      |
++-----------------------------------------------------------------------------------------+
+       |                                   |                                   |
+       v                                   v                                   v
++------------------------+      +------------------------+      +------------------------+
+|  Tier 2: Java Runtimes |      |  Tier 2: Ruby Runtime  |      | Tier 2: System Tools   |
+| - OpenJDK 21 (Default) |      | - Ruby 4.0.9 (rbenv)   |      | - Python 3 & Pip (PEP) |
+| - OpenJDK 17 (Instant) |      | - Bundler 4.0.23       |      | - GitHub CLI (gh)      |
+| - switch-jdk helper    |      | - Fastlane 2.241.2     |      | - curl, git-lfs, zip   |
++------------------------+      +------------------------+      +------------------------+
+       |                                   |                                   |
+       +-----------------------------------+-----------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------------+
+|                    Tier 3: Android Build Engine & Standalone CLI Tooling                |
+| - Gradle 9.8.2 Standalone + Dynamic Gradle Wrapper Auto-Execution                       |
+| - Android Gradle Plugin (AGP) 8.x & 9.x Fully Supported                                 |
+| - Android SDK Platforms: android-35, android-36, android-37 (Pre-installed)             |
+| - Android Build-Tools: 35.0.0, 36.0.0, 37.0.0 (Pre-installed)                           |
+| - Google Android CLI ('android') & standalone Bundletool 1.18.3                         |
++-----------------------------------------------------------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------------+
+|                 Tier 4: Zero-Config Dynamic Project Auto-Detection Engine               |
+| - detect-android-project: Scans build.gradle(.kts) & libs.versions.toml (<50ms)         |
+| - Multi-module maximum aggregation: automatically resolves highest compileSdk           |
+| - Auto-switches Java 17/21 and installs missing SDKs/build-tools on container startup   |
+| - Cross-compatibility: Automatically forces Java 17 if Gradle Wrapper < 8.5 is detected|
++-----------------------------------------------------------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------------+
+|                      Tier 5: Automated Testing & Deployment Tooling                     |
+| - Fastlane 2.241.2: Native Google Play Console deployment & lane automation             |
+| - Gradle Managed Devices (GMD): SwiftShader Headless GPU & KVM Hardware Acceleration    |
+| - Unit Testing, Android Lint & ProGuard/R8 bytecode optimization                        |
++-----------------------------------------------------------------------------------------+
+                                           |
+                                           v
++-----------------------------------------------------------------------------------------+
+|                 Tier 6: Dual-Mode Universal Network & Rootless Security                 |
+| - Mode 1: Public Internet (Direct unthrottled access to Google & Maven Central)         |
+| - Mode 2: Enterprise Intranet (Auto-Proxy, Custom CA Import, Nexus/Artifactory Mirrors) |
+| - Rootless Hardened: Universal 777 permissions (Runs under UID 1000:0, OpenShift, K8s)  |
+| - Trivy Certified: 0 Unfixed Critical CVEs                                             |
++-----------------------------------------------------------------------------------------+
+```
+
+---
+
+## ⚡ Quick Start by Developer Objective
+
+### 1. Interactive Debugging & System Healthcheck
+Verify container health, Java versions, SDK packages, and network connectivity in seconds:
 ```bash
+# Run full interactive diagnostic with network connectivity probes
+docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest ci-doctor
+
+# Inspect project requirements vs installed components (<50ms)
+docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest detect-android-project
+
+# Launch interactive shell
+docker run -it --rm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest /bin/bash
+```
+
+### 2. Build Release APK and Android App Bundle (AAB)
+Zero manual setup: the container auto-configures JDK and SDK matching your project:
+```bash
+# Build Release APK
 docker run --rm \
   -v "$(pwd)":/project \
   -v "$HOME/.gradle":/home/runner/.gradle \
   -w /project \
   hateum/android-ci-box:latest \
-  ./gradlew assembleRelease
-```
-> [!TIP]
-> The container automatically inspects your project build files upon startup, dynamically configuring the required OpenJDK (17 or 21) and installing any missing Android SDK or Build-Tools components without manual setup!
+  ./gradlew assembleRelease --no-daemon
 
-### 2. Launch an Interactive Debugging Shell
-```bash
-docker run -it --rm \
+# Build Release AAB and extract universal APK with Bundletool
+docker run --rm \
   -v "$(pwd)":/project \
   -w /project \
   hateum/android-ci-box:latest \
-  /bin/bash
+  bash -c "./gradlew bundleRelease --no-daemon && \
+    bundletool build-apks --bundle=app/build/outputs/bundle/release/app-release.aab --output=/tmp/app.apks --mode=universal"
 ```
 
-### 3. Run the Built-In Diagnostics & Project Analyzers
-Validate your runtime, JDK versions, SDK packages, and network connectivity in seconds:
-```bash
-# Full interactive colorized diagnostic with network connectivity probes
-docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest ci-doctor
-
-# Fast, machine-readable JSON status report (used by Docker Healthcheck & CI monitoring)
-docker run --rm hateum/android-ci-box:latest ci-doctor --json
-
-# Ultra-fast (<50ms) static inspection of your Android project requirements
-docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest detect-android-project
-```
-
----
-
-## 🔍 Intelligent Dynamic Auto-Detection & Runtime Configuration
-
-The container includes a built-in static inspection engine (`detect-android-project`) that analyzes your mounted Android repository (< 50ms) before executing any Gradle command.
-
-### How Dynamic Resolution Works:
-1. **`compileSdk` Auto-Detection**:
-   Scans `build.gradle(.kts)`, `app/build.gradle(.kts)`, and `gradle/libs.versions.toml`. If the project requires an SDK not pre-installed (e.g. API 34), it automatically installs it on-the-fly via Android CLI.
-2. **`buildToolsVersion` Auto-Detection**:
-   Checks for explicit `buildToolsVersion` definitions. If absent, it automatically derives the standard AGP default `${compileSdk}.0.0` (e.g. `34.0.0` for API 34) and provisions it if missing.
-3. **Java Version Auto-Detection**:
-   Scans `jvmToolchain(17|21)` or `JavaVersion.VERSION_17|21`. Automatically switches to the matching OpenJDK runtime. If a deprecated version (< 17) is declared, it warns and selects OpenJDK 17 (minimum requirement for AGP 8+/9+).
-
-```
-┌──────────────────────────┐
-│ Android Project Files    │──► [detect-android-project] ──► Auto-Switch JDK 17 / 21
-│ (build.gradle.kts, TOML) │                               ──► Auto-Install SDK / Build-Tools
-└──────────────────────────┘
-```
-
----
-
-## 🎛️ CI Runtime Environment Variables
-
-Explicit environment variables take **absolute precedence** over project auto-detection. You can declare them directly in your CI runner configuration:
-
-| Variable | Accepted Values | Default | Purpose |
-| :--- | :--- | :--- | :--- |
-| `JAVA_VERSION` | `17`, `21` | `21` | Overrides active JDK (updates `JAVA_HOME` and symlinks). |
-| `INSTALL_SDK_VERSION` | `33`, `34`, `35`, `36`, `37` | Auto-detected | Installs specified Android SDK platform if not present. |
-| `INSTALL_BUILD_TOOLS` | `34.0.0`, `33.0.3`, ... | Auto-derived | Installs specified Android build-tools version. |
-| `AUTO_DETECT_PROJECT` | `true`, `false` | `true` | Enables/disables static analysis of project build files. |
-| `AUTO_INSTALL_SDK` | `true`, `false` | `true` | Allows/disallows on-the-fly downloading of missing SDK components. |
-| `HTTP_PROXY` / `HTTPS_PROXY`| URL string | *None* | Automatically injected into `~/.gradle/gradle.properties`. |
-| `NO_PROXY` | Comma-separated domains | *None* | Converted to Java pipe-delimited format for `gradle.properties`. |
-| `NEXUS_URL` | URL string | *None* | Automatically derives mirror scripts for Google, MavenCentral, GradlePortal. |
-| `CORPORATE_CA_URL` | URL string | *None* | Downloads and imports corporate SSL certificate on container startup. |
-| `GRADLE_BUILD_CACHE_URL` | URL string | *None* | Preconfigures remote HTTP Gradle build caching in `init.d`. |
-
-### Example in GitHub Actions:
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-24.04
-    container:
-      image: hateum/android-ci-box:latest
-      env:
-        JAVA_VERSION: "17"           # Forces OpenJDK 17
-        INSTALL_SDK_VERSION: "34"    # Auto-installs API 34 platform
-```
-
----
-
-## 🛠️ CLI Utilities Quick Reference
-
-| Utility | Location | Key Usage / Options | Purpose |
-| :--- | :--- | :--- | :--- |
-| `ci-doctor` | `/usr/local/bin/ci-doctor` | `ci-doctor [--summary \| --json]` | Complete system, Java, SDK, network, and project diagnostics. |
-| `detect-android-project` | `/usr/local/bin/detect-android-project` | `detect-android-project [path] [--json]` | Ultra-fast (<50ms) static parser for compileSdk, buildTools, and JDK. |
-| `switch-jdk` | `/usr/local/bin/switch-jdk` | `switch-jdk 17` or `source switch-jdk 21` | Seamlessly toggles between OpenJDK 17 and OpenJDK 21. |
-| `install-sdk-version` | `/usr/local/bin/install-sdk-version` | `install-sdk-version 34` or `34.0.0` | Installs platforms or build-tools via Google Android CLI. |
-| `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
-| `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
-
----
-
-## ☕ Dual-JDK Switching (Java 17 ⇄ Java 21)
-
-While OpenJDK 21 is active by default to leverage the fastest G1 Garbage Collector and modern JIT optimizations, you can toggle seamlessly to OpenJDK 17 whenever required:
-
-```bash
-# Switch to OpenJDK 17
-switch-jdk 17
-
-# Switch back to OpenJDK 21
-switch-jdk 21
-
-# Or export to your current interactive shell
-source switch-jdk 17
-```
-
----
-
-## 🌐 Enterprise & Corporate Intranet Network Engine
-
-The container inspects its environment at startup and automatically adapts without requiring custom build scripts or dockerfiles.
-
-### 1. Corporate SSL Inspection & Custom CA Certificates
-Mount your corporate root and intermediate CA certificates into `/certificates` (supports `.crt`, `.cer`, `.pem`):
+### 3. Instrumented UI Testing: Gradle Managed Devices (GMD)
+Native headless emulator execution with SwiftShader GPU acceleration and KVM support:
 ```bash
 docker run --rm \
-  -v /path/to/my-company-ca.crt:/certificates/corp.crt \
-  hateum/android-ci-box:latest ./gradlew assembleRelease
-```
-* The entrypoint automatically registers certificates into the Linux system truststore (`update-ca-certificates`).
-* It automatically imports certificates into the active Java truststore (`cacerts` with `keytool`).
-
-### 2. Corporate HTTP/HTTPS Proxy Auto-Detection
-Pass your standard proxy environment variables:
-```bash
-docker run --rm \
-  -e HTTP_PROXY="http://proxy.company.com:8080" \
-  -e HTTPS_PROXY="http://proxy.company.com:8080" \
-  -e NO_PROXY="localhost,127.0.0.1,.company.internal" \
-  hateum/android-ci-box:latest ./gradlew assembleRelease
-```
-The entrypoint formats and writes `systemProp.http.*` and `systemProp.https.*` configurations directly into `~/.gradle/gradle.properties`.
-
-### 3. Nexus & Artifactory Mirror Auto-Derivation Engine
-Provide your internal Maven repository URL:
-```bash
-docker run --rm \
-  -e NEXUS_URL="https://nexus.company.com" \
-  -e NEXUS_USER="ci-builder" \
-  -e NEXUS_PASSWORD="secretPassword123" \
-  hateum/android-ci-box:latest ./gradlew assembleRelease
-```
-The entrypoint intercepts Google Maven, Maven Central, and Gradle Plugin Portal requests, automatically redirecting them to your enterprise internal mirror.
-
----
-
-## 📱 Instrumented Testing: Gradle Managed Devices (GMD)
-
-The image provides native, out-of-the-box support for **Gradle Managed Devices (GMD)**.
-
-### 🌟 Key Advantages
-1. **Zero Manual Scripts**: AGP provisions, boots headless, runs Espresso/UI Automator tests, records results, and terminates the emulator automatically.
-2. **Pre-configured Headless GPU Acceleration**: The entrypoint injects `android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect` into `gradle.properties`, eliminating headless display crashes.
-3. **CI Concurrency Protection**: `maxconcurrentdevices=1` is enforced to prevent runner Out-Of-Memory (OOM) errors.
-4. **Hardware KVM Acceleration**: Pass `--device /dev/kvm` to leverage near-native hardware virtualization; software fallback activates automatically if KVM is absent.
-
-### Configuration in your Android Project (`app/build.gradle` or `build.gradle.kts`)
-```groovy
-android {
-    testOptions {
-        animationsDisabled = true
-        managedDevices {
-            allDevices {
-                pixel8api35(com.android.build.api.dsl.ManagedVirtualDevice) {
-                    device = "Pixel 8"
-                    apiLevel = 35
-                    systemImageSource = "google-atd"
-                }
-            }
-        }
-    }
-}
+  --device /dev/kvm \
+  -v "$(pwd)":/project \
+  -w /project \
+  hateum/android-ci-box:latest \
+  ./gradlew pixel8api35DebugAndroidTest --no-daemon
 ```
 
-### Execution Commands in CI
-```bash
-docker run --rm --device /dev/kvm -v "$(pwd)":/project -w /project hateum/android-ci-box:latest \
-  ./gradlew pixel8api35DebugAndroidTest
-```
-
----
-
-## 🤖 AI Agent Integration (Antigravity, Claude Code, GitHub Copilot)
-
-This repository is engineered for autonomous AI coding agents:
-- **AI Agent Skill**: [`.agents/skills/android-ci-box/SKILL.md`](.agents/skills/android-ci-box/SKILL.md)
-- **Agent Governance & Architecture Context**: [`AGENTS.md`](AGENTS.md)
-- **Product Requirements Document (PRD)**: [`docs/PRD.md`](docs/PRD.md)
-- **Architecture Decision Records (ADRs)**: [`docs/adr/`](docs/adr/)
-- **Upstream Obsolescence & Dependency Watchdog**: [`.github/workflows/dependency-and-obsolescence-watch.yml`](.github/workflows/dependency-and-obsolescence-watch.yml)
-
-### Supported Agent Workflows:
-- **Environment Assessment**: Autonomous invocation of `ci-doctor` to identify missing SDK packages or KVM capabilities.
-- **Automated JDK Switching**: Invocation of `switch-jdk 17` or `switch-jdk 21` when diagnosing bytecode compatibility issues.
-- **Headless Build & Lint Execution**: Running `./gradlew assembleRelease bundleRelease test lintRelease` with non-daemon, optimal memory settings.
-- **GMD Troubleshooting**: Automatically analyzing GMD failure logs and emulator kernel messages.
-- **Automated Obsolescence Alerting**: Weekly automated GitHub Issues and Pull Requests when newer Gradle, AGP, or Bundletool versions are released.
-
-To activate this skill in your AI assistant, point your agent to `.agents/skills/android-ci-box/SKILL.md`.
-
----
-
-## 🚀 Multi-Platform CI/CD Integrations & Templates
-
-The image is tested and pre-optimized for all major enterprise CI/CD runners. Ready-to-use pipeline configurations are available under [`examples/ci/`](examples/ci/):
-
-| CI/CD Platform | Ready-to-Use Template | Deep-Dive Reference Guide | Supported Features |
-| :--- | :--- | :--- | :--- |
-| **GitLab CI/CD** | [`examples/ci/.gitlab-ci.yml`](examples/ci/.gitlab-ci.yml) | [`references/gitlab-ci.md`](.agents/skills/android-ci-box/references/gitlab-ci.md) | Docker & Kubernetes Runners, KVM device mapping, JUnit & SARIF reports |
-| **GitHub Actions** | [`examples/ci/github-actions.yml`](examples/ci/github-actions.yml) | [`references/github-actions.md`](.agents/skills/android-ci-box/references/github-actions.md) | Container jobs, Self-Hosted KVM runners, `actions/cache@v4` |
-| **Jenkins** | [`examples/ci/Jenkinsfile`](examples/ci/Jenkinsfile) | [`references/jenkins.md`](.agents/skills/android-ci-box/references/jenkins.md) | Declarative pipelines, Docker Agent, K8s Pod Templates with KVM plugin |
-| **Bitbucket Pipelines** | [`examples/ci/bitbucket-pipelines.yml`](examples/ci/bitbucket-pipelines.yml) | [`references/bitbucket-pipelines.md`](.agents/skills/android-ci-box/references/bitbucket-pipelines.md) | Custom Docker container execution, 2x resource sizing, wrapper caches |
-| **CircleCI** | [`examples/ci/circleci-config.yml`](examples/ci/circleci-config.yml) | [`references/circleci.md`](.agents/skills/android-ci-box/references/circleci.md) | Docker executor, `xlarge` resource class, `store_test_results` |
-
-### Pipeline Quick Examples:
-
-**GitHub Actions (`.github/workflows/android.yml`)**:
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-24.04
-    container:
-      image: hateum/android-ci-box:latest
-      options: --user 1000:0
-    steps:
-      - uses: actions/checkout@v5
-      - run: ci-doctor --summary
-      - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
-```
-
-**GitLab CI/CD (`.gitlab-ci.yml`)**:
-```yaml
-build:
-  image: hateum/android-ci-box:latest
-  script:
-    - ci-doctor --summary
-    - ./gradlew assembleRelease bundleRelease --no-daemon
-  artifacts:
-    paths:
-      - app/build/outputs/apk/release/*.apk
-      - app/build/outputs/bundle/release/*.aab
-```
-*See [`examples/ci/`](examples/ci/) for complete Jenkins, Bitbucket, and CircleCI configurations.*
-
----
-
-## 🚀 Fastlane CI/CD & Google Play Deployment Guide
-
-The image includes **Ruby 4.0.9**, **Bundler 4.0.23**, and **Fastlane 2.241.2** pre-configured in `/opt/rbenv` with universal permissions (`777`), enabling both root and non-root runners to execute lanes out-of-the-box.
-
-### 1. Project Configuration
-
-Add a minimal `Gemfile` and `fastlane/Fastfile` to your Android repository:
-
-`Gemfile`:
-```ruby
-source "https://rubygems.org"
-gem "fastlane", "2.241.2"
-```
-
-`fastlane/Fastfile`:
-```ruby
-default_platform(:android)
-
-platform :android do
-  desc "Build and publish Release AAB to Google Play Internal Track"
-  lane :deploy_internal do
-    gradle(task: "clean bundleRelease")
-    
-    upload_to_play_store(
-      track: "internal",
-      release_status: "draft",
-      skip_upload_images: true,
-      skip_upload_screenshots: true
-    )
-  end
-end
-```
-
-### 2. Google Play API Credentials Setup
-
-Instead of storing sensitive `.json` key files in your Git repository, pass the service account JSON content directly through the CI environment variable:
-
-- **`SUPPLY_JSON_KEY_DATA`**: The raw JSON content of your Google Play Service Account Key (configured in GitHub Secrets as `PLAY_STORE_JSON_KEY`).
-- Alternatively, mount a secret file: `-e SUPPLY_JSON_KEY=/secrets/play_key.json -v /local/key.json:/secrets/play_key.json:ro`.
-
-### 3. Execution in Container
-
+### 4. Continuous Deployment with Fastlane
+Deploy directly to Google Play Internal track without installing Ruby gems:
 ```bash
 docker run --rm \
   -v "$(pwd)":/project \
@@ -357,96 +147,149 @@ docker run --rm \
 
 ---
 
-## 🔐 Android Keystore Signing via CI Environment Variables
+## 🔍 Dynamic Auto-Detection & Cross-Compatibility Safeguards
 
-To sign release builds (`assembleRelease` or `bundleRelease`) reproducibly in CI without checking private `.jks`/`.keystore` files into source control, use Base64 encoding.
+The container includes a built-in static inspection engine (`detect-android-project`) executed by `entrypoint.sh` on startup:
 
-### 1. Encode your Keystore Locally
-```bash
-# Linux / macOS
-base64 -i release.keystore | tr -d '\n' > keystore.base64
-```
-Store this string in your CI secrets as `KEYSTORE_BASE64`.
-
-### 2. Configure `app/build.gradle` (or `app/build.gradle.kts`)
-Read signing properties dynamically from environment variables or gradle properties:
-
-```groovy
-android {
-    signingConfigs {
-        release {
-            def keystoreFile = file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
-            if (keystoreFile.exists()) {
-                storeFile keystoreFile
-                storePassword System.getenv("KEYSTORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
-            }
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-}
-```
-
-### 3. Decode & Build in GitHub Actions Workflow
-```yaml
-      - name: Decode Release Keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/release.keystore
-
-      - name: Build and Sign Release AAB
-        run: ./gradlew bundleRelease --no-daemon
-        env:
-          KEYSTORE_PATH: /tmp/release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Cleanup Keystore
-        if: always()
-        run: rm -f /tmp/release.keystore
-```
+1. **`compileSdk` Resolution**: Scans all sub-modules and selects the maximum target SDK. If missing from `/opt/android-sdk`, it auto-downloads it on-the-fly.
+2. **`buildToolsVersion` Resolution**: Scans for explicit definitions or falls back to `${compileSdk}.0.0` (standard AGP behavior).
+3. **Java Version Matching**: Selects OpenJDK 17 or 21 matching `jvmToolchain` or `JavaVersion.VERSION_XX`.
+4. **Gradle ⇄ Java Compatibility Fallback**: If a project uses Gradle Wrapper < 8.5 (incompatible with Java 21), the container automatically switches to OpenJDK 17 to prevent build crashes.
+5. **Air-Gapped Resiliency**: A 2-second network probe tests connectivity before downloading. If running offline, it warns and proceeds without freezing.
 
 ---
 
-## ⚡ 360° Performance Architecture
+## 🎛️ CI Runtime Environment Variables
 
-| Optimization Pillar | Technical Implementation | CI & Developer Impact |
-| :--- | :--- | :--- |
-| **JVM Engine & GC** | OpenJDK 21 + `G1GC` + `-XX:+ParallelRefProcEnabled` + full C2 JIT | Reduces GC pause times; up to **2x faster** Kotlin and R8 compilation. |
-| **Gradle Scheduling** | `org.gradle.parallel=true`, `org.gradle.caching=true`, `org.gradle.vfs.watch=false` | Maximum multi-core task parallelization and automated task output reuse. |
-| **Image Slimming** | Purged documentation (`/usr/share/doc`, `/usr/share/man`), APT caches and gems | Ultra-fast `docker pull` on Kubernetes runners and ephemeral agents. |
-| **Anti-SIGPIPE Stability** | Pre-calculated Android licenses and POSIX-compliant script execution | Eliminates `exit code 141` errors under strict shells with `set -o pipefail`. |
-| **Shared Remote Cache** | Native support for `GRADLE_BUILD_CACHE_URL` in `init.d` | Instant cross-pipeline build cache sharing across enterprise teams. |
+Explicit variables take **absolute precedence** over project auto-detection:
+
+| Variable | Values / Format | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| `JAVA_VERSION` | `17`, `21` | `21` | Overrides active JDK (updates `JAVA_HOME` and symlinks). |
+| `INSTALL_SDK_VERSION` | `33`, `34`, `35`, `36`, `37` | Auto-detected | Installs specified Android SDK platform if not present. |
+| `INSTALL_BUILD_TOOLS` | `34.0.0`, `33.0.3`, ... | Auto-derived | Installs specified Android build-tools version. |
+| `AUTO_DETECT_PROJECT` | `true`, `false` | `true` | Enables/disables static analysis of project build files. |
+| `AUTO_INSTALL_SDK` | `true`, `false` | `true` | Allows/disallows on-the-fly downloading of missing SDK components. |
+| `HTTP_PROXY` / `HTTPS_PROXY`| `http://proxy:8080` | *None* | Injected into `~/.gradle/gradle.properties` automatically. |
+| `NO_PROXY` | `localhost,127.0.0.1,.corp` | *None* | Converted to Java pipe-delimited format for `gradle.properties`. |
+| `NEXUS_URL` | `https://nexus.corp/repository`| *None* | Derives mirror hooks for Google, MavenCentral, GradlePortal. |
+| `CORPORATE_CA_URL` | URL string | *None* | Downloads and imports corporate SSL certificate on startup. |
+| `GRADLE_BUILD_CACHE_URL` | URL string | *None* | Configures remote HTTP Gradle build caching in `init.d`. |
+
+---
+
+## 🛠️ CLI Utilities Reference
+
+| Utility | Location | Usage Example | Purpose |
+| :--- | :--- | :--- | :--- |
+| `ci-doctor` | `/usr/local/bin/ci-doctor` | `ci-doctor [--summary \| --json]` | Complete system, Java, SDK, network, and project diagnostics. |
+| `detect-android-project` | `/usr/local/bin/detect-android-project` | `detect-android-project [path] [--json]` | Ultra-fast (<50ms) static parser for compileSdk, buildTools, and JDK. |
+| `switch-jdk` | `/usr/local/bin/switch-jdk` | `switch-jdk 17` or `source switch-jdk 21` | Seamlessly toggles between OpenJDK 17 and OpenJDK 21. |
+| `install-sdk-version` | `/usr/local/bin/install-sdk-version` | `install-sdk-version 34` or `34.0.0` | Installs platforms or build-tools via Google Android CLI. |
+| `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
+| `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
+
+---
+
+## 🚀 CI/CD Pipeline Recipes
+
+### 1. GitHub Actions (`.github/workflows/android.yml`)
+```yaml
+name: Android CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:latest
+      options: --user 1000:0
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
+      - name: Run Diagnostics & Lint
+        run: |
+          ci-doctor --summary
+          ./gradlew lintRelease testReleaseUnitTest --no-daemon
+      - name: Build Release Bundle
+        run: ./gradlew bundleRelease --no-daemon
+      - name: Fastlane Google Play Deploy (Optional)
+        run: bundle exec fastlane android deploy_internal
+        env:
+          SUPPLY_JSON_KEY_DATA: ${{ secrets.PLAY_STORE_JSON_KEY }}
+```
+
+### 2. GitLab CI/CD (`.gitlab-ci.yml`)
+```yaml
+default:
+  image: hateum/android-ci-box:latest
+  before_script:
+    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .gradle/caches/
+      - .gradle/wrapper/
+
+stages: [ test, build ]
+
+lint_and_test:
+  stage: test
+  script:
+    - ci-doctor --summary
+    - ./gradlew lintRelease testReleaseUnitTest --no-daemon
+
+build_aab:
+  stage: build
+  script:
+    - ./gradlew bundleRelease --no-daemon
+  artifacts:
+    paths:
+      - app/build/outputs/bundle/release/*.aab
+```
+*For Jenkins, Bitbucket Pipelines, and CircleCI, see [`examples/ci/`](examples/ci/).*
+
+---
+
+## 🌐 Enterprise & Corporate Intranet Setup
+
+### 1. SSL Inspection & Custom Corporate CA Certificates
+Mount your enterprise certificates (`.crt`, `.cer`, `.pem`) into `/certificates`:
+```bash
+docker run --rm \
+  -v /path/to/corporate-ca.crt:/certificates/corp.crt \
+  hateum/android-ci-box:latest ./gradlew assembleRelease
+```
+Certificates are automatically registered in the system truststore and Java `cacerts`.
+
+### 2. Nexus / Artifactory Mirror Auto-Derivation
+Pass your internal repository URL to redirect Google Maven and MavenCentral automatically:
+```bash
+docker run --rm \
+  -e NEXUS_URL="https://nexus.corp.internal/repository" \
+  -e NEXUS_USER="ci-builder" \
+  -e NEXUS_PASSWORD="secretPassword123" \
+  hateum/android-ci-box:latest ./gradlew assembleRelease
+```
 
 ---
 
 ## ❓ FAQ & Troubleshooting
 
-### 1. How to fix SSL `PKIX path building failed`?
-This happens when your corporate proxy inspects SSL traffic with an internal certificate.
-👉 **Fix**: Mount your corporate certificate into `/certificates`:
-```bash
-docker run -v /path/to/corp-cert.crt:/certificates/corp.crt hateum/android-ci-box:latest ...
-```
+### 1. Can I run on OpenShift, Kubernetes, or hardened runners?
+Yes. Universal read/write permissions (`777`) are set on `/project`, `/builds`, `/opt`, and `/home/runner/.gradle`, allowing execution under any UID (e.g. `--user 1000:0` or `--user 1001:1001`).
 
-### 2. Can I run on OpenShift or non-root runners?
-Yes. The image is pre-configured with universal read/write permissions for arbitrary UIDs:
-```bash
-docker run --user 1000:0 hateum/android-ci-box:latest ...
-```
+### 2. How to fix SSL `PKIX path building failed`?
+Mount your corporate certificate into `/certificates`:
+`docker run -v /path/to/corp-cert.crt:/certificates/corp.crt hateum/android-ci-box:latest ...`
 
-### 3. How do I disable the Gradle Daemon?
-The image ships with `org.gradle.daemon=false` enabled by default to prevent zombie daemon processes from consuming RAM on shared runners.
-
-### 4. What is the status of the Android Emulator on ARM64 Linux runners?
-Google compiles and releases the official Android SDK Emulator binary (`emulator`) exclusively for `linux/x86_64`. On ARM64 Linux hosts (e.g. AWS Graviton, Ampere), Android application compilation, APK/AAB generation, Android Lint, unit tests, and Fastlane lanes run at native ARM64 silicon speed, but headless emulator testing via GMD requires an `x86_64` runner.
+### 3. What is the status of the Android Emulator on ARM64 Linux hosts?
+Google compiles the Linux SDK Emulator (`emulator`) exclusively for `x86_64`. On ARM64 Linux hosts (e.g. AWS Graviton), compilation, linting, unit tests, and Fastlane run at native silicon speed, while headless emulator tests require an `x86_64` runner.
 
 ---
 
