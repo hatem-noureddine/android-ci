@@ -69,6 +69,10 @@ export INSTALL_SDK_VERSION="34"
 # Automatically install specific Android build-tools version on startup:
 export INSTALL_BUILD_TOOLS="34.0.0"
 
+# Automatically install Android NDK & CMake on startup:
+export INSTALL_NDK_VERSION="27.2.12479018"
+export INSTALL_CMAKE_VERSION="3.22.1"
+
 # Optional: Disable automatic static detection or auto-download if running air-gapped:
 export AUTO_DETECT_PROJECT="false"
 export AUTO_INSTALL_SDK="false"

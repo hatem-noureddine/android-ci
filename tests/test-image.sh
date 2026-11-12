@@ -113,6 +113,25 @@ else
     exit 1
 fi
 
+# Verify install-ndk-version CLI usage
+echo "Verifying install-ndk-version CLI interface..."
+NDK_USAGE=$(install-ndk-version --help 2>&1 || true)
+if echo "$NDK_USAGE" | grep -q "Usage: install-ndk-version"; then
+    echo -e "${GREEN}✔ install-ndk-version CLI interface verified!${RESET}"
+else
+    echo -e "${RED}✘ install-ndk-version CLI failed argument check!${RESET}"
+    exit 1
+fi
+
+# Verify Gradle CI Optimizations init-script
+echo "Verifying Gradle CI Optimizations init-script..."
+if [ -f /opt/gradle/init.d/ci-optimizations.gradle ]; then
+    echo -e "${GREEN}✔ /opt/gradle/init.d/ci-optimizations.gradle present!${RESET}"
+else
+    echo -e "${RED}✘ /opt/gradle/init.d/ci-optimizations.gradle missing!${RESET}"
+    exit 1
+fi
+
 # Verify detect-android-project CLI usage
 echo "Verifying detect-android-project CLI interface & detection..."
 DETECT_OUT=$(detect-android-project /project/test_projects/SampleProject)
@@ -121,7 +140,9 @@ if echo "$DETECT_OUT" | grep -q "Android Project       : Yes" && \
    echo "$DETECT_OUT" | grep -q "Gradle Wrapper        : 9.8.2" && \
    echo "$DETECT_OUT" | grep -q "Android Gradle Plugin : 9.4.1" && \
    echo "$DETECT_OUT" | grep -q "Target compileSdk     : 37" && \
-   echo "$DETECT_OUT" | grep -q "Target Java Version   : 17"; then
+   echo "$DETECT_OUT" | grep -q "Target Java Version   : 17" && \
+   echo "$DETECT_OUT" | grep -q "Target NDK Version" && \
+   echo "$DETECT_OUT" | grep -q "Target CMake Version"; then
     echo -e "${GREEN}✔ detect-android-project correctly detected SampleProject requirements!${RESET}"
 else
     echo -e "${RED}✘ detect-android-project failed detection check!${RESET}"

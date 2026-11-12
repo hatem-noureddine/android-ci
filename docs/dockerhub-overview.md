@@ -26,6 +26,9 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 | **Vulnerability Audit** | Often contains unpatched high/critical CVEs | **Zero Unfixed Critical CVEs** (strictly audited via Trivy SARIF gates) |
 | **Enterprise Network** | Custom Dockerfiles required for proxies & certs | **Auto-imported CA certs, automatic HTTP proxy & Nexus/Artifactory mirror derivation** |
 | **Deployment Tools** | Slow `gem install fastlane` on every build | **Precompiled Ruby 4.0.9 + Fastlane 2.241.2** ready out-of-the-box in `/opt/rbenv` |
+| **C/C++ NDK & CMake** | Missing or forces massive 4GB+ image size | **Dynamic On-Demand Engine (`install-ndk-version` & `INSTALL_NDK_VERSION`)** |
+| **GitHub Action Integration** | Raw container scripting required | **Official Composite Action (`uses: hatem-noureddine/android-ci@v1.4.0`)** |
+| **Build Performance Tuning** | Default Gradle daemon issues in Docker | **Auto-injected CI Optimization Init-Script (Parallel, Caching, VFS off)** |
 | **Testing & Emulation** | Complex X11/VNC setup or broken display | **Native Gradle Managed Devices (GMD)** with SwiftShader Headless GPU acceleration |
 | **Health Diagnostics** | No diagnostic tooling | **Built-in `ci-doctor` & `detect-android-project`** CLI utilities with JSON reporting |
 
@@ -168,6 +171,9 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `JAVA_VERSION` | `17`, `21` | `21` | Overrides active JDK (updates `JAVA_HOME` and symlinks). |
 | `INSTALL_SDK_VERSION` | `33`, `34`, `35`, `36`, `37` | Auto-detected | Installs specified Android SDK platform if not present. |
 | `INSTALL_BUILD_TOOLS` | `34.0.0`, `33.0.3`, ... | Auto-derived | Installs specified Android build-tools version. |
+| `INSTALL_NDK_VERSION` | `27.2.12479018`, `26.1...` | Auto-detected | Installs specified Android NDK on-demand. |
+| `INSTALL_CMAKE_VERSION` | `3.22.1`, `3.28...` | Auto-detected | Installs specified Android CMake on-demand. |
+| `ENABLE_CI_OPTIMIZATIONS` | `true`, `false` | `true` | Enables/disables automatic Gradle CI parallel & build caching init-script. |
 | `AUTO_DETECT_PROJECT` | `true`, `false` | `true` | Enables/disables static analysis of project build files. |
 | `AUTO_INSTALL_SDK` | `true`, `false` | `true` | Allows/disallows on-the-fly downloading of missing SDK components. |
 | `HTTP_PROXY` / `HTTPS_PROXY`| `http://proxy:8080` | *None* | Injected into `~/.gradle/gradle.properties` automatically. |
@@ -186,6 +192,7 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `detect-android-project` | `/usr/local/bin/detect-android-project` | `detect-android-project [path] [--json]` | Ultra-fast (<50ms) static parser for compileSdk, buildTools, and JDK. |
 | `switch-jdk` | `/usr/local/bin/switch-jdk` | `switch-jdk 17` or `source switch-jdk 21` | Seamlessly toggles between OpenJDK 17 and OpenJDK 21. |
 | `install-sdk-version` | `/usr/local/bin/install-sdk-version` | `install-sdk-version 34` or `34.0.0` | Installs platforms or build-tools via Google Android CLI. |
+| `install-ndk-version` | `/usr/local/bin/install-ndk-version` | `install-ndk-version 27.2.12479018 [cmake]` | Dynamically installs Android NDK and CMake with rootless permissions. |
 | `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
 
@@ -193,7 +200,27 @@ Explicit variables take **absolute precedence** over project auto-detection:
 
 ## 🚀 CI/CD Pipeline Recipes
 
-### 1. GitHub Actions (`.github/workflows/android.yml`)
+### 1. GitHub Actions (Official 1-Line Composite Action or Container Job)
+
+#### Option A: Official GitHub Action (`uses: hatem-noureddine/android-ci@v1.4.0`)
+```yaml
+name: Android CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & Test Android App
+        uses: hatem-noureddine/android-ci@v1.4.0
+        with:
+          run: |
+            ci-doctor --summary
+            ./gradlew lintRelease testReleaseUnitTest assembleRelease
+```
+
+#### Option B: Native Container Job (`container: image: hateum/android-ci-box:latest`)
 ```yaml
 name: Android CI
 on: [push, pull_request]
@@ -205,7 +232,7 @@ jobs:
       image: hateum/android-ci-box:latest
       options: --user 1000:0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: actions/cache@v4
         with:
           path: |

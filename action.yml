@@ -1,0 +1,81 @@
+name: "Android CI Build Box"
+description: "High-performance Android CI/CD runner with Java 17/21, Gradle 9.8, Android SDK 35-37, NDK, Fastlane & Bundletool"
+author: "Hatem Noureddine"
+
+branding:
+  icon: "smartphone"
+  color: "green"
+
+inputs:
+  run:
+    description: "Shell command or script to execute inside the android-ci-box container"
+    required: true
+  java-version:
+    description: "Java JDK version to activate (17 or 21). Defaults to auto-detection from project."
+    required: false
+    default: ""
+  sdk-version:
+    description: "Android compileSdk platform to ensure (e.g. 34, 35, 36, 37). Defaults to auto-detection."
+    required: false
+    default: ""
+  build-tools:
+    description: "Android build-tools version (e.g. 35.0.0, 36.0.0, 37.0.0). Defaults to auto-detection."
+    required: false
+    default: ""
+  ndk-version:
+    description: "Android NDK version to install on-demand (e.g. 27.2.12479018). Defaults to auto-detection."
+    required: false
+    default: ""
+  image-version:
+    description: "Docker image version tag of hateum/android-ci-box"
+    required: false
+    default: "1.4.0"
+  gradle-cache:
+    description: "Enable automatic GitHub Actions cache for Gradle dependencies and wrappers"
+    required: false
+    default: "true"
+  project-dir:
+    description: "Relative path to the Android project root directory within the workspace"
+    required: false
+    default: "."
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Restore Gradle CI Build Cache"
+      if: inputs.gradle-cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+        restore-keys: |
+          gradle-${{ runner.os }}-
+
+    - name: "Execute Command in Android CI Box"
+      shell: bash
+      env:
+        INPUT_RUN: ${{ inputs.run }}
+        INPUT_JAVA_VERSION: ${{ inputs.java-version }}
+        INPUT_SDK_VERSION: ${{ inputs.sdk-version }}
+        INPUT_BUILD_TOOLS: ${{ inputs.build-tools }}
+        INPUT_NDK_VERSION: ${{ inputs.ndk-version }}
+        INPUT_IMAGE_VERSION: ${{ inputs.image-version }}
+        INPUT_PROJECT_DIR: ${{ inputs.project-dir }}
+      run: |
+        DOCKER_ENV_ARGS=()
+        [ -n "$INPUT_JAVA_VERSION" ] && DOCKER_ENV_ARGS+=(-e "JAVA_VERSION=$INPUT_JAVA_VERSION")
+        [ -n "$INPUT_SDK_VERSION" ] && DOCKER_ENV_ARGS+=(-e "INSTALL_SDK_VERSION=$INPUT_SDK_VERSION")
+        [ -n "$INPUT_BUILD_TOOLS" ] && DOCKER_ENV_ARGS+=(-e "INSTALL_BUILD_TOOLS=$INPUT_BUILD_TOOLS")
+        [ -n "$INPUT_NDK_VERSION" ] && DOCKER_ENV_ARGS+=(-e "INSTALL_NDK_VERSION=$INPUT_NDK_VERSION")
+        [ -n "$INPUT_PROJECT_DIR" ] && DOCKER_ENV_ARGS+=(-e "PROJECT_DIR=$INPUT_PROJECT_DIR")
+
+        docker run --rm \
+          --user "$(id -u):$(id -g)" \
+          -v "${{ github.workspace }}:/project" \
+          -v "${HOME}/.gradle:/home/runner/.gradle" \
+          -w "/project" \
+          "${DOCKER_ENV_ARGS[@]}" \
+          "hateum/android-ci-box:${INPUT_IMAGE_VERSION}" \
+          bash -c "$INPUT_RUN"

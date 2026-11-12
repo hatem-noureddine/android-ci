@@ -53,6 +53,8 @@ def detect_project(project_dir="."):
     found_bts = set()
     found_javas = set()
     found_agps = set()
+    found_ndks = set()
+    found_cmakes = set()
     is_android = False
 
     # Check Gradle Wrapper version if present
@@ -128,6 +130,18 @@ def detect_project(project_dir="."):
         for m in re.finditer(r"(?:agp|androidGradlePlugin|android-gradle-plugin)\s*=\s*[\"']([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[a-zA-Z0-9.]+)?);?[\"']", content):
             found_agps.add(m.group(1))
 
+        # 5. Detect NDK Version
+        for m in re.finditer(r"ndkVersion\s*(?:=|\s)\s*\(?[\"']([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)[\"']\)?", content):
+            found_ndks.add(m.group(1))
+        for m in re.finditer(r"(?:ndk|ndkVersion|android-ndk)\s*=\s*[\"']([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)[\"']", content):
+            found_ndks.add(m.group(1))
+
+        # 6. Detect CMake Version
+        for m in re.finditer(r"cmake\s*\{[^}]*version\s*(?:=|\s)\s*\(?[\"']([0-9]+\.[0-9]+(?:\.[0-9]+)?)[\"']\)?", content, re.DOTALL):
+            found_cmakes.add(m.group(1))
+        for m in re.finditer(r"(?:cmake|cmakeVersion)\s*=\s*[\"']([0-9]+\.[0-9]+(?:\.[0-9]+)?)[\"']", content):
+            found_cmakes.add(m.group(1))
+
     compile_sdk = str(max(found_sdks)) if found_sdks else None
 
     build_tools = None
@@ -162,7 +176,25 @@ def detect_project(project_dir="."):
                 compat_note = f"Gradle Wrapper {gradle_ver} is incompatible with Java 21 (requires Gradle >= 8.5). Auto-adjusting to OpenJDK 17."
                 java_ver = "17"
 
-    # Check local availability against container SDK/JDK folders
+    ndk_ver = None
+    if found_ndks:
+        def ndk_key(v):
+            try:
+                return [int(x) for x in re.findall(r"[0-9]+", v)]
+            except Exception:
+                return [0, 0, 0, 0]
+        ndk_ver = max(found_ndks, key=ndk_key)
+
+    cmake_ver = None
+    if found_cmakes:
+        def cmake_key(v):
+            try:
+                return [int(x) for x in re.findall(r"[0-9]+", v)]
+            except Exception:
+                return [0, 0, 0]
+        cmake_ver = max(found_cmakes, key=cmake_key)
+
+    # Check local availability against container SDK/JDK/NDK folders
     android_home = os.environ.get("ANDROID_HOME", "/opt/android-sdk")
     sdk_installed = False
     if compile_sdk:
@@ -177,6 +209,14 @@ def detect_project(project_dir="."):
         if java_ver in ("17", "21") and os.path.isdir(f"/opt/jdk-{java_ver}"):
             java_installed = True
 
+    ndk_installed = False
+    if ndk_ver:
+        ndk_installed = os.path.isdir(os.path.join(android_home, "ndk", ndk_ver)) or os.path.isdir(os.path.join(android_home, "ndk-bundle"))
+
+    cmake_installed = False
+    if cmake_ver:
+        cmake_installed = os.path.isdir(os.path.join(android_home, "cmake", cmake_ver))
+
     return {
         "is_android": is_android,
         "project_dir": target_dir,
@@ -185,11 +225,15 @@ def detect_project(project_dir="."):
         "compile_sdk": compile_sdk,
         "build_tools": build_tools,
         "java_version": java_ver,
+        "ndk_version": ndk_ver,
+        "cmake_version": cmake_ver,
         "compatibility_note": compat_note,
         "installed": {
             "compile_sdk": sdk_installed,
             "build_tools": bt_installed,
-            "java_version": java_installed
+            "java_version": java_installed,
+            "ndk_version": ndk_installed,
+            "cmake_version": cmake_installed
         }
     }
 
@@ -221,6 +265,8 @@ def main():
         print(f"Target compileSdk     : {res['compile_sdk'] or 'Not detected'} (Installed: {'Yes' if res['installed']['compile_sdk'] else 'No'})")
         print(f"Target buildTools     : {res['build_tools'] or 'Not detected'} (Installed: {'Yes' if res['installed']['build_tools'] else 'No'})")
         print(f"Target Java Version   : {res['java_version'] or 'Not detected'} (Installed: {'Yes' if res['installed']['java_version'] else 'No'})")
+        print(f"Target NDK Version    : {res['ndk_version'] or 'Not detected'} (Installed: {'Yes' if res['installed']['ndk_version'] else 'No'})")
+        print(f"Target CMake Version  : {res['cmake_version'] or 'Not detected'} (Installed: {'Yes' if res['installed']['cmake_version'] else 'No'})")
         if res.get("compatibility_note"):
             print(f"Compatibility Note    : {res['compatibility_note']}")
 

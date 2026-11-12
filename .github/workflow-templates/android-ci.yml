@@ -1,0 +1,27 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Android CI Box Action
+        uses: hatem-noureddine/android-ci@v1.4.0
+        with:
+          run: |
+            ci-doctor --summary
+            ./gradlew test lintRelease assembleDebug --stacktrace

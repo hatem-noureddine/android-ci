@@ -55,6 +55,14 @@ BUILD_TOOLS=""
 if [ -d "${ANDROID_HOME:-/opt/android-sdk}/build-tools" ]; then
     BUILD_TOOLS=$(find "${ANDROID_HOME:-/opt/android-sdk}/build-tools" -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
 fi
+NDK_VERSIONS=""
+if [ -d "${ANDROID_HOME:-/opt/android-sdk}/ndk" ]; then
+    NDK_VERSIONS=$(find "${ANDROID_HOME:-/opt/android-sdk}/ndk" -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
+fi
+CMAKE_VERSIONS=""
+if [ -d "${ANDROID_HOME:-/opt/android-sdk}/cmake" ]; then
+    CMAKE_VERSIONS=$(find "${ANDROID_HOME:-/opt/android-sdk}/cmake" -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null | sort | tr '\n' ' ')
+fi
 
 # 4. Automation & Deployment Tooling
 GRADLE_VER=""
@@ -134,11 +142,13 @@ if [ "$MODE" = "json" ]; then
     FORMATTED_JDKS=$(echo "$AVAILABLE_JDKS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
     FORMATTED_PLATFORMS=$(echo "$PLATFORMS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
     FORMATTED_BUILD_TOOLS=$(echo "$BUILD_TOOLS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
+    FORMATTED_NDK=$(echo "$NDK_VERSIONS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
+    FORMATTED_CMAKE=$(echo "$CMAKE_VERSIONS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
 
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.3.2",
+  "version": "1.4.0",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
@@ -156,6 +166,8 @@ if [ "$MODE" = "json" ]; then
     "android_home": "$(clean_token "$SDK_HOME_VAL")",
     "platforms": [${FORMATTED_PLATFORMS}],
     "build_tools": [${FORMATTED_BUILD_TOOLS}],
+    "ndk": [${FORMATTED_NDK}],
+    "cmake": [${FORMATTED_CMAKE}],
     "android_cli": "$(clean_token "$ANDROID_CLI_VER")",
     "emulator": "$(clean_token "$EMU_VERSION")"
   },
@@ -222,6 +234,16 @@ if [ -n "$BUILD_TOOLS" ]; then
     echo -e "  Build Tools     : ${GREEN}${BUILD_TOOLS}${RESET}"
 else
     echo -e "  Build Tools     : ${RED}None installed${RESET}"
+fi
+if [ -n "$NDK_VERSIONS" ]; then
+    echo -e "  NDK Versions    : ${GREEN}${NDK_VERSIONS}${RESET}"
+else
+    echo -e "  NDK Versions    : None installed"
+fi
+if [ -n "$CMAKE_VERSIONS" ]; then
+    echo -e "  CMake Versions  : ${GREEN}${CMAKE_VERSIONS}${RESET}"
+else
+    echo -e "  CMake Versions  : None installed"
 fi
 echo ""
 

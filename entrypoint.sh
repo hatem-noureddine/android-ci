@@ -16,6 +16,8 @@ mkdir -p "$GRADLE_DIR" "$GRADLE_DIR/init.d" 2>/dev/null || true
 REQ_JAVA="${JAVA_VERSION:-${DEFAULT_JDK:-}}"
 REQ_SDK="${INSTALL_SDK_VERSION:-${ANDROID_COMPILE_SDK:-}}"
 REQ_BUILD_TOOLS="${INSTALL_BUILD_TOOLS:-${ANDROID_BUILD_TOOLS_VERSION:-}}"
+REQ_NDK="${INSTALL_NDK_VERSION:-${ANDROID_NDK_VERSION:-}}"
+REQ_CMAKE="${INSTALL_CMAKE_VERSION:-${CMAKE_VERSION:-}}"
 
 # If any variable is missing and AUTO_DETECT_PROJECT != false, auto-detect from project
 if [ "${AUTO_DETECT_PROJECT:-true}" != "false" ] && command -v detect-android-project >/dev/null 2>&1; then
@@ -54,6 +56,24 @@ if [ "${AUTO_DETECT_PROJECT:-true}" != "false" ] && command -v detect-android-pr
             if [ -n "$DETECTED_BT" ]; then
                 echo "ℹ️  [auto-detect] Detected Android buildToolsVersion $DETECTED_BT from project configuration"
                 REQ_BUILD_TOOLS="$DETECTED_BT"
+            fi
+        fi
+
+        # Auto-detect NDK if not explicitly set
+        if [ -z "$REQ_NDK" ]; then
+            DETECTED_NDK=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('ndk_version') or '')" 2>/dev/null || echo "")
+            if [ -n "$DETECTED_NDK" ]; then
+                echo "ℹ️  [auto-detect] Detected Android NDK $DETECTED_NDK from project configuration"
+                REQ_NDK="$DETECTED_NDK"
+            fi
+        fi
+
+        # Auto-detect CMake if not explicitly set
+        if [ -z "$REQ_CMAKE" ]; then
+            DETECTED_CMAKE=$(echo "$DETECTION_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('cmake_version') or '')" 2>/dev/null || echo "")
+            if [ -n "$DETECTED_CMAKE" ]; then
+                echo "ℹ️  [auto-detect] Detected Android CMake $DETECTED_CMAKE from project configuration"
+                REQ_CMAKE="$DETECTED_CMAKE"
             fi
         fi
     fi
@@ -114,6 +134,44 @@ if [ -n "$REQ_BUILD_TOOLS" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
     fi
 fi
 
+# Apply / Install Android NDK
+if [ -n "$REQ_NDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
+    NDK_BASE_DIR="${ANDROID_HOME:-/opt/android-sdk}/ndk/${REQ_NDK}"
+    if [ ! -d "$NDK_BASE_DIR" ]; then
+        if can_reach_network; then
+            echo "⬇️  [ndk] Android NDK ${REQ_NDK} not present. Auto-installing..."
+            if command -v install-ndk-version >/dev/null 2>&1; then
+                install-ndk-version "$REQ_NDK" "${REQ_CMAKE:-}" >/dev/null 2>&1 || true
+            fi
+        else
+            echo "⚠️  [ndk] Android NDK ${REQ_NDK} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
+        fi
+    fi
+fi
+
+if [ -n "$REQ_NDK" ] && [ -d "${ANDROID_HOME:-/opt/android-sdk}/ndk/${REQ_NDK}" ]; then
+    export ANDROID_NDK_HOME="${ANDROID_HOME:-/opt/android-sdk}/ndk/${REQ_NDK}"
+    export ANDROID_NDK_ROOT="${ANDROID_HOME:-/opt/android-sdk}/ndk/${REQ_NDK}"
+    export PATH="${ANDROID_NDK_HOME}:${PATH}"
+fi
+
+# Apply / Install Android CMake
+if [ -n "$REQ_CMAKE" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
+    CMAKE_BASE_DIR="${ANDROID_HOME:-/opt/android-sdk}/cmake/${REQ_CMAKE}"
+    if [ ! -d "$CMAKE_BASE_DIR" ]; then
+        if can_reach_network; then
+            echo "⬇️  [cmake] Android CMake ${REQ_CMAKE} not present. Auto-installing..."
+            "${ANDROID_HOME:-/opt/android-sdk}/cmdline-tools/latest/bin/sdkmanager" "cmake;${REQ_CMAKE}" >/dev/null 2>&1 || true
+        else
+            echo "⚠️  [cmake] Android CMake ${REQ_CMAKE} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
+        fi
+    fi
+fi
+
+if [ -n "$REQ_CMAKE" ] && [ -d "${ANDROID_HOME:-/opt/android-sdk}/cmake/${REQ_CMAKE}/bin" ]; then
+    export PATH="${ANDROID_HOME:-/opt/android-sdk}/cmake/${REQ_CMAKE}/bin:${PATH}"
+fi
+
 # ------------------------------------------------------------------------------
 # 1. Gradle CI Performance Optimization Defaults
 # ------------------------------------------------------------------------------
@@ -134,6 +192,20 @@ org.gradle.jvmargs=${GRADLE_JVMARGS:--Xmx4g -XX:+UseG1GC -XX:+ParallelRefProcEna
 android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 android.testoptions.manageddevices.emulator.showKernelLogging=true
 android.experimental.testoptions.manageddevices.maxconcurrentdevices=1
+EOF
+fi
+
+if [ "${ENABLE_CI_OPTIMIZATIONS:-true}" != "false" ] && [ -d "$GRADLE_DIR/init.d" ]; then
+    cat << 'EOF' > "$GRADLE_DIR/init.d/ci-optimizations.init.gradle"
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+        options.encoding = 'UTF-8'
+    }
+}
+gradle.projectsLoaded {
+    rootProject.logger.info("⚡ [hateum/android-ci-box] CI Optimizations active: parallel=true, buildCache=true, daemon=false")
+}
 EOF
 fi
 
