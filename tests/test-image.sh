@@ -232,6 +232,35 @@ else
 fi
 rm -rf "$TEST_ENTRY_AUTO"
 
+echo "Testing enterprise Ruby & Fastlane mirror (NEXUS_RUBY_URL)..."
+TEST_RUBY_DIR="/tmp/test_entry_ruby"
+mkdir -p "$TEST_RUBY_DIR"
+NEXUS_RUBY_URL="https://nexus.test.internal/repository/rubygems" \
+GRADLE_USER_HOME="$TEST_RUBY_DIR" \
+/entrypoint.sh echo "Ruby mirror test"
+if bundle config get mirror.https://rubygems.org 2>&1 | grep -q "nexus.test.internal"; then
+    echo -e "${GREEN}✔ Bundler correctly configured with NEXUS_RUBY_URL mirror!${RESET}"
+else
+    echo -e "${RED}✘ Bundler mirror configuration check failed!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_RUBY_DIR"
+
+echo "Testing graceful offline fallback mode (OFFLINE_MODE=true)..."
+TEST_OFFLINE_DIR="/tmp/test_entry_offline"
+mkdir -p "$TEST_OFFLINE_DIR"
+OFFLINE_MODE="true" \
+GRADLE_USER_HOME="$TEST_OFFLINE_DIR" \
+/entrypoint.sh echo "Offline test"
+if [ -f "$TEST_OFFLINE_DIR/init.d/fallback-offline.init.gradle" ] && \
+   grep -q "startParameter.offline = true" "$TEST_OFFLINE_DIR/init.d/fallback-offline.init.gradle"; then
+    echo -e "${GREEN}✔ Graceful offline fallback init-script correctly injected!${RESET}"
+else
+    echo -e "${RED}✘ Offline fallback script missing or malformed!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_OFFLINE_DIR"
+
 echo -e "${GREEN}✔ Enterprise network integration & runtime customization verified!${RESET}\n"
 
 # ------------------------------------------------------------------------------
