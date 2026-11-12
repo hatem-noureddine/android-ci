@@ -140,7 +140,8 @@ ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/
 # Layer 5: Helper scripts
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version
+COPY bin/detect-android-project /usr/local/bin/detect-android-project
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/detect-android-project
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \

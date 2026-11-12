@@ -32,7 +32,7 @@ It features an intelligent **dual-mode universal network engine** that works ins
 │  🚀 Deployment Tools: Fastlane 2.241.2, Bundletool 1.18.3, GitHub CLI (gh)    │
 │  💎 Ruby & Gems      : Ruby 4.0.9 (rbenv, /opt/rbenv), Bundler 4.0.23          │
 │  🐍 CI Tooling       : Python 3 & Pip (No PEP 668 restriction)                 │
-│  🩺 Health Diagnostic: Built-in 'ci-doctor' CLI utility                       │
+│  🩺 Health Diagnostic: Built-in 'ci-doctor' & 'detect-android-project' CLI    │
 ├───────────────────────────────────────────────────────────────────────────────┤
 │                      🌐 DUAL-MODE UNIVERSAL NETWORK ENGINE                    │
 │  Mode 1 (Public)    : Direct unthrottled access to Google & Maven Central     │
@@ -47,7 +47,7 @@ It features an intelligent **dual-mode universal network engine** that works ins
 
 ## ⚡ Quick Start in 60 Seconds
 
-### 1. Build an Android App Locally (One-Liner)
+### 1. Build an Android App Locally (Zero-Config One-Liner)
 Mount your local Android project repository to `/project`:
 ```bash
 docker run --rm \
@@ -57,6 +57,8 @@ docker run --rm \
   hateum/android-ci-box:latest \
   ./gradlew assembleRelease
 ```
+> [!TIP]
+> The container automatically inspects your project build files upon startup, dynamically configuring the required OpenJDK (17 or 21) and installing any missing Android SDK or Build-Tools components without manual setup!
 
 ### 2. Launch an Interactive Debugging Shell
 ```bash
@@ -67,21 +69,89 @@ docker run -it --rm \
   /bin/bash
 ```
 
-### 3. Run the Built-In Diagnostics Tool
+### 3. Run the Built-In Diagnostics & Project Analyzers
 Validate your runtime, JDK versions, SDK packages, and network connectivity in seconds:
 ```bash
 # Full interactive colorized diagnostic with network connectivity probes
-docker run --rm hateum/android-ci-box:latest ci-doctor
+docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest ci-doctor
 
 # Fast, machine-readable JSON status report (used by Docker Healthcheck & CI monitoring)
 docker run --rm hateum/android-ci-box:latest ci-doctor --json
+
+# Ultra-fast (<50ms) static inspection of your Android project requirements
+docker run --rm -v "$(pwd)":/project hateum/android-ci-box:latest detect-android-project
 ```
+
+---
+
+## 🔍 Intelligent Dynamic Auto-Detection & Runtime Configuration
+
+The container includes a built-in static inspection engine (`detect-android-project`) that analyzes your mounted Android repository (< 50ms) before executing any Gradle command.
+
+### How Dynamic Resolution Works:
+1. **`compileSdk` Auto-Detection**:
+   Scans `build.gradle(.kts)`, `app/build.gradle(.kts)`, and `gradle/libs.versions.toml`. If the project requires an SDK not pre-installed (e.g. API 34), it automatically installs it on-the-fly via Android CLI.
+2. **`buildToolsVersion` Auto-Detection**:
+   Checks for explicit `buildToolsVersion` definitions. If absent, it automatically derives the standard AGP default `${compileSdk}.0.0` (e.g. `34.0.0` for API 34) and provisions it if missing.
+3. **Java Version Auto-Detection**:
+   Scans `jvmToolchain(17|21)` or `JavaVersion.VERSION_17|21`. Automatically switches to the matching OpenJDK runtime. If a deprecated version (< 17) is declared, it warns and selects OpenJDK 17 (minimum requirement for AGP 8+/9+).
+
+```
+┌──────────────────────────┐
+│ Android Project Files    │──► [detect-android-project] ──► Auto-Switch JDK 17 / 21
+│ (build.gradle.kts, TOML) │                               ──► Auto-Install SDK / Build-Tools
+└──────────────────────────┘
+```
+
+---
+
+## 🎛️ CI Runtime Environment Variables
+
+Explicit environment variables take **absolute precedence** over project auto-detection. You can declare them directly in your CI runner configuration:
+
+| Variable | Accepted Values | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| `JAVA_VERSION` | `17`, `21` | `21` | Overrides active JDK (updates `JAVA_HOME` and symlinks). |
+| `INSTALL_SDK_VERSION` | `33`, `34`, `35`, `36`, `37` | Auto-detected | Installs specified Android SDK platform if not present. |
+| `INSTALL_BUILD_TOOLS` | `34.0.0`, `33.0.3`, ... | Auto-derived | Installs specified Android build-tools version. |
+| `AUTO_DETECT_PROJECT` | `true`, `false` | `true` | Enables/disables static analysis of project build files. |
+| `AUTO_INSTALL_SDK` | `true`, `false` | `true` | Allows/disallows on-the-fly downloading of missing SDK components. |
+| `HTTP_PROXY` / `HTTPS_PROXY`| URL string | *None* | Automatically injected into `~/.gradle/gradle.properties`. |
+| `NO_PROXY` | Comma-separated domains | *None* | Converted to Java pipe-delimited format for `gradle.properties`. |
+| `NEXUS_URL` | URL string | *None* | Automatically derives mirror scripts for Google, MavenCentral, GradlePortal. |
+| `CORPORATE_CA_URL` | URL string | *None* | Downloads and imports corporate SSL certificate on container startup. |
+| `GRADLE_BUILD_CACHE_URL` | URL string | *None* | Preconfigures remote HTTP Gradle build caching in `init.d`. |
+
+### Example in GitHub Actions:
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:latest
+      env:
+        JAVA_VERSION: "17"           # Forces OpenJDK 17
+        INSTALL_SDK_VERSION: "34"    # Auto-installs API 34 platform
+```
+
+---
+
+## 🛠️ CLI Utilities Quick Reference
+
+| Utility | Location | Key Usage / Options | Purpose |
+| :--- | :--- | :--- | :--- |
+| `ci-doctor` | `/usr/local/bin/ci-doctor` | `ci-doctor [--summary \| --json]` | Complete system, Java, SDK, network, and project diagnostics. |
+| `detect-android-project` | `/usr/local/bin/detect-android-project` | `detect-android-project [path] [--json]` | Ultra-fast (<50ms) static parser for compileSdk, buildTools, and JDK. |
+| `switch-jdk` | `/usr/local/bin/switch-jdk` | `switch-jdk 17` or `source switch-jdk 21` | Seamlessly toggles between OpenJDK 17 and OpenJDK 21. |
+| `install-sdk-version` | `/usr/local/bin/install-sdk-version` | `install-sdk-version 34` or `34.0.0` | Installs platforms or build-tools via Google Android CLI. |
+| `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
+| `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
 
 ---
 
 ## ☕ Dual-JDK Switching (Java 17 ⇄ Java 21)
 
-While OpenJDK 21 is active by default to leverage the fastest G1 Garbage Collector and modern JIT optimizations, you can toggle seamlessly to OpenJDK 17 whenever required by legacy Gradle plugins:
+While OpenJDK 21 is active by default to leverage the fastest G1 Garbage Collector and modern JIT optimizations, you can toggle seamlessly to OpenJDK 17 whenever required:
 
 ```bash
 # Switch to OpenJDK 17
@@ -92,16 +162,6 @@ switch-jdk 21
 
 # Or export to your current interactive shell
 source switch-jdk 17
-```
-
-Or declare it directly as an environment variable in your CI runner (auto-switched on container startup by `entrypoint.sh`):
-```yaml
-environment:
-  JAVA_VERSION: "17"           # Automatically toggles to OpenJDK 17
-  INSTALL_SDK_VERSION: "34"    # Automatically installs API 34 if not already present
-```
-environment:
-  JAVA_HOME: "/opt/jdk-17"
 ```
 
 ---

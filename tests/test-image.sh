@@ -113,6 +113,29 @@ else
     exit 1
 fi
 
+# Verify detect-android-project CLI usage
+echo "Verifying detect-android-project CLI interface & detection..."
+DETECT_OUT=$(detect-android-project /project/test_projects/SampleProject)
+echo "$DETECT_OUT"
+if echo "$DETECT_OUT" | grep -q "Android Project       : Yes" && \
+   echo "$DETECT_OUT" | grep -q "Target compileSdk     : 37" && \
+   echo "$DETECT_OUT" | grep -q "Target Java Version   : 17"; then
+    echo -e "${GREEN}✔ detect-android-project correctly detected SampleProject requirements!${RESET}"
+else
+    echo -e "${RED}✘ detect-android-project failed detection check!${RESET}"
+    exit 1
+fi
+
+DETECT_JSON=$(detect-android-project /project/test_projects/SampleProject --json)
+echo "$DETECT_JSON" | python3 -m json.tool >/dev/null
+DETECTED_SDK_JSON=$(echo "$DETECT_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('compile_sdk'))")
+if [ "$DETECTED_SDK_JSON" = "37" ]; then
+    echo -e "${GREEN}✔ detect-android-project --json output is valid!${RESET}"
+else
+    echo -e "${RED}✘ detect-android-project --json unexpected compile_sdk: $DETECTED_SDK_JSON!${RESET}"
+    exit 1
+fi
+
 gh --version
 echo -e "${GREEN}✔ All CLI tools verified!${RESET}\n"
 
@@ -174,6 +197,17 @@ else
     exit 1
 fi
 rm -rf "$TEST_ENTRY_DIR"
+
+echo "Testing entrypoint dynamic auto-detection from project files..."
+TEST_ENTRY_AUTO="/tmp/test_entry_auto"
+mkdir -p "$TEST_ENTRY_AUTO"
+if (cd /project/test_projects/SampleProject && GRADLE_USER_HOME="$TEST_ENTRY_AUTO" /entrypoint.sh java -version 2>&1 | grep -q '17\.'); then
+    echo -e "${GREEN}✔ entrypoint.sh dynamically detected and configured JDK 17 from SampleProject!${RESET}"
+else
+    echo -e "${RED}✘ entrypoint.sh failed project-based Java auto-switch!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_ENTRY_AUTO"
 
 echo -e "${GREEN}✔ Enterprise network integration & runtime customization verified!${RESET}\n"
 

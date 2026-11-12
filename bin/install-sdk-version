@@ -43,6 +43,9 @@ if [[ "$TARGET" =~ ^[0-9]+$ ]]; then
     install_package "platforms;android-${TARGET}"
     install_package "build-tools;${TARGET}.0.0" || true
   fi
+elif [[ "$TARGET" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Installing Android build-tools $TARGET via Android CLI / sdkmanager..."
+  install_package "build-tools;${TARGET}"
 else
   install_package "$TARGET"
 fi

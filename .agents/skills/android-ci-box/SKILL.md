@@ -54,8 +54,10 @@ ci-doctor --json
 ci-doctor --summary
 ```
 
-### Step 2: Zero-Code CI Runtime Version Selection
-Instead of writing setup commands in your pipeline, configure versions directly via CI environment variables:
+### Step 2: Zero-Code CI Runtime Version Selection & Project Auto-Detection
+The container features an intelligent static analyzer (`detect-android-project`) that automatically reads `build.gradle(.kts)` and `libs.versions.toml` at startup to configure matching JDK, compileSdk, and build-tools versions.
+
+You can also override or enforce versions directly via CI environment variables:
 
 ```bash
 # Automatically switch to JDK 17 on container startup:
@@ -63,6 +65,22 @@ export JAVA_VERSION="17"
 
 # Automatically install older/additional Android SDK platform on startup:
 export INSTALL_SDK_VERSION="34"
+
+# Automatically install specific Android build-tools version on startup:
+export INSTALL_BUILD_TOOLS="34.0.0"
+
+# Optional: Disable automatic static detection or auto-download if running air-gapped:
+export AUTO_DETECT_PROJECT="false"
+export AUTO_INSTALL_SDK="false"
+```
+
+To run the project analyzer standalone:
+```bash
+# Interactive overview of project targets vs installed SDKs:
+detect-android-project /path/to/project
+
+# Machine-readable JSON output:
+detect-android-project /path/to/project --json
 ```
 
 What `ci-doctor` checks:

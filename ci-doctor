@@ -102,6 +102,21 @@ if [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
     KVM_ACCEL=true
 fi
 
+# 7. Project Detection (if present in pwd or /project)
+PROJ_SCAN_DIR="${PROJECT_DIR:-$(pwd)}"
+if [ ! -f "$PROJ_SCAN_DIR/build.gradle" ] && [ ! -f "$PROJ_SCAN_DIR/build.gradle.kts" ] && [ -d "/project" ]; then
+    if [ -f "/project/build.gradle" ] || [ -f "/project/build.gradle.kts" ] || [ -f "/project/app/build.gradle" ] || [ -f "/project/app/build.gradle.kts" ]; then
+        PROJ_SCAN_DIR="/project"
+    fi
+fi
+
+PROJ_JSON="{}"
+if command -v detect-android-project >/dev/null 2>&1; then
+    PROJ_JSON=$(detect-android-project "$PROJ_SCAN_DIR" --json 2>/dev/null || echo "{}")
+elif [ -x "./bin/detect-android-project" ]; then
+    PROJ_JSON=$(./bin/detect-android-project "$PROJ_SCAN_DIR" --json 2>/dev/null || echo "{}")
+fi
+
 # ------------------------------------------------------------------------------
 # JSON Summary Mode (Fast, Non-Blocking, Machine-Readable for Healthchecks & Agents)
 # ------------------------------------------------------------------------------
@@ -160,7 +175,8 @@ if [ "$MODE" = "json" ]; then
   },
   "virtualization": {
     "kvm_available": $KVM_ACCEL
-  }
+  },
+  "project": ${PROJ_JSON}
 }
 EOF
     if [ "$HEALTHY" = true ]; then
@@ -286,7 +302,22 @@ else
 fi
 echo ""
 
-echo -e "${BOLD}7. Connectivity Probes${RESET}"
+echo -e "${BOLD}7. Mounted Android Project Inspection${RESET}"
+IS_PROJ=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('is_android', False))" 2>/dev/null || echo "False")
+if [ "$IS_PROJ" = "True" ]; then
+    P_SDK=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('compile_sdk') or 'Unknown')" 2>/dev/null || echo "Unknown")
+    P_BT=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('build_tools') or 'Unknown')" 2>/dev/null || echo "Unknown")
+    P_JV=$(echo "$PROJ_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('java_version') or 'Unknown')" 2>/dev/null || echo "Unknown")
+    echo -e "  Android Project : ${GREEN}Detected in ${PROJ_SCAN_DIR}${RESET}"
+    echo -e "  Target SDK      : ${CYAN}${P_SDK}${RESET}"
+    echo -e "  Build Tools     : ${CYAN}${P_BT}${RESET}"
+    echo -e "  Target Java     : ${CYAN}${P_JV}${RESET}"
+else
+    echo -e "  Android Project : ${CYAN}No Android project detected in ${PROJ_SCAN_DIR}${RESET}"
+fi
+echo ""
+
+echo -e "${BOLD}8. Connectivity Probes${RESET}"
 test_url() {
     local target="$1"
     local name="$2"
