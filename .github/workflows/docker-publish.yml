@@ -33,7 +33,7 @@ jobs:
           failure-threshold: error
 
       - name: Run ShellCheck (Shell Scripts Linter)
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: '.'
           ignore_paths: >-
@@ -67,8 +67,8 @@ jobs:
           context: .
           load: true
           tags: ${{ env.IMAGE_NAME }}:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
 
       # --- Security: Automated Vulnerability Scanning (Trivy) ---
       - name: Run Trivy Vulnerability Scanner (SARIF Report)
@@ -323,7 +323,7 @@ jobs:
 
       - name: Update Docker Hub Description & Overview
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@v4.0.0
         continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME }}

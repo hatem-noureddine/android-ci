@@ -29,7 +29,7 @@ inputs:
   image-version:
     description: "Docker image version tag of hateum/android-ci-box"
     required: false
-    default: "1.4.0"
+    default: "latest"
   gradle-cache:
     description: "Enable automatic GitHub Actions cache for Gradle dependencies and wrappers"
     required: false
@@ -78,4 +78,4 @@ runs:
           -w "/project" \
           "${DOCKER_ENV_ARGS[@]}" \
           "hateum/android-ci-box:${INPUT_IMAGE_VERSION}" \
-          bash -c "$INPUT_RUN"
+          bash -c 'eval "$1"' _ "$INPUT_RUN"

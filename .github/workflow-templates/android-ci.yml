@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Android CI Box Action
-        uses: hatem-noureddine/android-ci@v1.4.0
+        uses: hatem-noureddine/android-ci@v1
         with:
           run: |
             ci-doctor --summary

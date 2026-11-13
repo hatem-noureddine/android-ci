@@ -27,7 +27,7 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 | **Enterprise Network** | Custom Dockerfiles required for proxies & certs | **Auto-imported CA certs, automatic HTTP proxy & Nexus/Artifactory mirror derivation** |
 | **Deployment Tools** | Slow `gem install fastlane` on every build | **Precompiled Ruby 4.0.9 + Fastlane 2.241.2** ready out-of-the-box in `/opt/rbenv` |
 | **C/C++ NDK & CMake** | Missing or forces massive 4GB+ image size | **Dynamic On-Demand Engine (`install-ndk-version` & `INSTALL_NDK_VERSION`)** |
-| **GitHub Action Integration** | Raw container scripting required | **Official Composite Action (`uses: hatem-noureddine/android-ci@v1.4.0`)** |
+| **GitHub Action Integration** | Raw container scripting required | **Official Composite Action (`uses: hatem-noureddine/android-ci@v1`)** |
 | **Build Performance Tuning** | Default Gradle daemon issues in Docker | **Auto-injected CI Optimization Init-Script (Parallel, Caching, VFS off)** |
 | **Testing & Emulation** | Complex X11/VNC setup or broken display | **Native Gradle Managed Devices (GMD)** with SwiftShader Headless GPU acceleration |
 | **Health Diagnostics** | No diagnostic tooling | **Built-in `ci-doctor` & `detect-android-project`** CLI utilities with JSON reporting |
@@ -204,7 +204,7 @@ Explicit variables take **absolute precedence** over project auto-detection:
 
 ### 1. GitHub Actions (Official 1-Line Composite Action or Container Job)
 
-#### Option A: Official GitHub Action (`uses: hatem-noureddine/android-ci@v1.4.0`)
+#### Option A: Official GitHub Action (`uses: hatem-noureddine/android-ci@v1`)
 ```yaml
 name: Android CI
 on: [push, pull_request]
@@ -215,7 +215,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build & Test Android App
-        uses: hatem-noureddine/android-ci@v1.4.0
+        uses: hatem-noureddine/android-ci@v1
         with:
           run: |
             ci-doctor --summary
