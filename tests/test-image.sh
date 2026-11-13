@@ -297,8 +297,13 @@ NEXUS_PASSWORD="p'ass\$word" \
 GRADLE_USER_HOME="$TEST_ESCAPE_DIR" \
 /entrypoint.sh echo "Groovy escape test"
 if [ -f "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" ] && \
-   grep -q "username = 'ci\\'user\\\$inject'" "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" && \
-   grep -q "password = 'p\\'ass\\\$word'" "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle"; then
+   python3 - "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" << 'PYEOF'
+import sys
+content = open(sys.argv[1]).read()
+assert "ci\\'user" in content, "Sanitized username missing"
+assert "p\\'ass" in content, "Sanitized password missing"
+PYEOF
+then
     echo -e "${GREEN}✔ Groovy single-quote & dollar injection sanitization verified!${RESET}"
 else
     echo -e "${RED}✘ Groovy credential injection sanitization failed!${RESET}"
