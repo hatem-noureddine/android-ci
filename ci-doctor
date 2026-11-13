@@ -170,7 +170,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.4.5",
+  "version": "1.4.6",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
@@ -225,7 +225,7 @@ fi
 # ------------------------------------------------------------------------------
 # Full Interactive Terminal Diagnostic
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}${CYAN}=== Android CI Doctor (hateum/android-ci-box v1.4.5) ===${RESET}\n"
+echo -e "${BOLD}${CYAN}=== Android CI Doctor (hateum/android-ci-box v1.4.6) ===${RESET}\n"
 
 echo -e "${BOLD}1. System & User Execution${RESET}"
 echo -e "  OS Architecture : ${OS_ARCH} (${DPKG_ARCH})"
