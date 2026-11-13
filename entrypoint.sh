@@ -93,15 +93,13 @@ if [ -n "$REQ_JAVA" ]; then
     if [ "$REQ_JAVA" = "17" ] || [ "$REQ_JAVA" = "21" ]; then
         export JAVA_HOME="/opt/jdk-${REQ_JAVA}"
         if command -v switch-jdk >/dev/null 2>&1; then
-            # shellcheck source=/dev/null
-            source switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || true
+            switch-jdk "$REQ_JAVA" >/dev/null 2>&1 || true
         fi
     elif [ "$REQ_JAVA" -lt 17 ] 2>/dev/null; then
         echo "⚠️  [warning] Java $REQ_JAVA is deprecated for AGP 8+/9+. Switching to minimum supported OpenJDK 17."
         export JAVA_HOME="/opt/jdk-17"
         if command -v switch-jdk >/dev/null 2>&1; then
-            # shellcheck source=/dev/null
-            source switch-jdk 17 >/dev/null 2>&1 || switch-jdk 17 >/dev/null 2>&1 || true
+            switch-jdk 17 >/dev/null 2>&1 || true
         fi
     fi
 fi
@@ -175,7 +173,11 @@ if [ -n "$REQ_NDK" ] && [ "${AUTO_INSTALL_SDK:-true}" != "false" ]; then
         if [ "$NETWORK_REACHABLE" = "true" ]; then
             echo "⬇️  [ndk] Android NDK ${REQ_NDK} not present. Auto-installing..."
             if command -v install-ndk-version >/dev/null 2>&1; then
-                install-ndk-version "$REQ_NDK" "${REQ_CMAKE:-}" >/dev/null 2>&1 || true
+                if [ -n "$REQ_CMAKE" ]; then
+                    install-ndk-version "$REQ_NDK" "$REQ_CMAKE" >/dev/null 2>&1 || true
+                else
+                    install-ndk-version "$REQ_NDK" >/dev/null 2>&1 || true
+                fi
             fi
         else
             echo "⚠️  [ndk] Android NDK ${REQ_NDK} missing and network unreachable (offline/air-gapped CI). Skipping auto-download."
@@ -227,6 +229,8 @@ android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 android.testoptions.manageddevices.emulator.showKernelLogging=true
 android.experimental.testoptions.manageddevices.maxconcurrentdevices=1
 EOF
+else
+    echo "ℹ️  [gradle] Existing gradle.properties detected at $GRADLE_PROP_FILE (preserving mounted user configuration)."
 fi
 
 if [ "${ENABLE_CI_OPTIMIZATIONS:-true}" != "false" ] && [ -d "$GRADLE_DIR/init.d" ]; then
@@ -299,13 +303,28 @@ fi
 # ------------------------------------------------------------------------------
 RAW_PROXY="${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}"
 if [ -n "$RAW_PROXY" ] && [ -w "$GRADLE_PROP_FILE" ]; then
-    CLEAN_PROXY="${RAW_PROXY#*://}"
-    PROXY_HOST=$(echo "$CLEAN_PROXY" | cut -d: -f1)
-    PROXY_PORT=$(echo "$CLEAN_PROXY" | cut -d: -f2 | cut -d/ -f1)
-    NON_PROXY="${NO_PROXY:-${no_proxy:-"localhost,127.0.0.1"}}"
-    NON_PROXY_JAVA=$(echo "$NON_PROXY" | tr ',' '|')
+    PARSED_PROXY=$(python3 -c '
+import sys
+from urllib.parse import urlparse
+try:
+    raw = sys.argv[1]
+    if "://" not in raw:
+        raw = "http://" + raw
+    p = urlparse(raw)
+    host = p.hostname or ""
+    port = str(p.port) if p.port else ("443" if p.scheme == "https" else "8080")
+    print(f"{host}|{port}")
+except Exception:
+    print("|")
+' "$RAW_PROXY" 2>/dev/null || echo "|")
+    PROXY_HOST=$(echo "$PARSED_PROXY" | cut -d'|' -f1)
+    PROXY_PORT=$(echo "$PARSED_PROXY" | cut -d'|' -f2)
 
-    cat <<EOF >> "$GRADLE_PROP_FILE"
+    if [ -n "$PROXY_HOST" ]; then
+        NON_PROXY="${NO_PROXY:-${no_proxy:-"localhost,127.0.0.1"}}"
+        NON_PROXY_JAVA=$(echo "$NON_PROXY" | tr ',' '|')
+
+        cat <<EOF >> "$GRADLE_PROP_FILE"
 systemProp.http.proxyHost=$PROXY_HOST
 systemProp.http.proxyPort=$PROXY_PORT
 systemProp.https.proxyHost=$PROXY_HOST
@@ -313,6 +332,7 @@ systemProp.https.proxyPort=$PROXY_PORT
 systemProp.http.nonProxyHosts=$NON_PROXY_JAVA
 systemProp.https.nonProxyHosts=$NON_PROXY_JAVA
 EOF
+    fi
 fi
 
 # ------------------------------------------------------------------------------
