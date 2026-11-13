@@ -6,6 +6,15 @@ set -e
 # Hardened for both Root and Non-Root (OpenShift / Kubernetes / GitLab Runner)
 # ==============================================================================
 
+# Helper: Safely escape single quotes and backslashes for Groovy string literals ('...')
+escape_groovy_single_quotes() {
+    local str="${1:-}"
+    str="${str//\\/\\\\}"
+    str="${str//\'/\\\'}"
+    str="${str//\$/\\\$}"
+    printf '%s' "$str"
+}
+
 # Determine active Gradle user home
 GRADLE_DIR="${GRADLE_USER_HOME:-/home/runner/.gradle}"
 mkdir -p "$GRADLE_DIR" "$GRADLE_DIR/init.d" 2>/dev/null || true
@@ -263,7 +272,12 @@ done
 # Dynamic CA download from URL if provided
 TARGET_CA_URL="${CORPORATE_CA_URL:-${CA_CERT_URL:-}}"
 if [ -n "$TARGET_CA_URL" ]; then
-    curl -fsSL -k "$TARGET_CA_URL" -o /usr/local/share/ca-certificates/corporate-url-ca.crt 2>/dev/null || true
+    CURL_CA_OPTS=("-fsSL")
+    if [ "${INSECURE_CA_DOWNLOAD:-false}" = "true" ] || [ "${ALLOW_INSECURE_CA:-false}" = "true" ]; then
+        echo "⚠️  [ca-security] INSECURE_CA_DOWNLOAD is enabled: SSL verification disabled for CA download."
+        CURL_CA_OPTS+=("-k")
+    fi
+    curl "${CURL_CA_OPTS[@]}" "$TARGET_CA_URL" -o /usr/local/share/ca-certificates/corporate-url-ca.crt 2>/dev/null || true
     if [ -f /usr/local/share/ca-certificates/corporate-url-ca.crt ]; then
         CA_IMPORTED=1
         if [ -n "$JAVA_HOME" ] && [ -w "$JAVA_HOME/lib/security/cacerts" ]; then
@@ -331,14 +345,19 @@ if [ -n "$ALL_NEXUS_INPUT" ] && [ -d "$GRADLE_DIR/init.d" ]; then
     MIRROR_PASS="${NEXUS_PASSWORD:-${ARTIFACTORY_PASSWORD:-}}"
     CREDENTIALS_BLOCK=""
     if [ -n "$MIRROR_USER" ] && [ -n "$MIRROR_PASS" ]; then
-        CREDENTIALS_BLOCK="credentials { username = '$MIRROR_USER'; password = '$MIRROR_PASS' }"
+        SAFE_USER=$(escape_groovy_single_quotes "$MIRROR_USER")
+        SAFE_PASS=$(escape_groovy_single_quotes "$MIRROR_PASS")
+        CREDENTIALS_BLOCK="credentials { username = '$SAFE_USER'; password = '$SAFE_PASS' }"
     fi
+
+    SAFE_PRIMARY_MIRROR=$(escape_groovy_single_quotes "$PRIMARY_MIRROR")
 
     GROOVY_REPOS_CODE=""
     for repo_url in "${PARSED_REPOS[@]}"; do
+        SAFE_REPO_URL=$(escape_groovy_single_quotes "$repo_url")
         GROOVY_REPOS_CODE="${GROOVY_REPOS_CODE}
             maven {
-                url = uri('$repo_url')
+                url = uri('$SAFE_REPO_URL')
                 $CREDENTIALS_BLOCK
             }"
     done
@@ -351,7 +370,7 @@ allprojects {
                 if (repo instanceof MavenArtifactRepository) {
                     def urlStr = repo.url.toString()
                     if (urlStr.contains("dl.google.com") || urlStr.contains("repo.maven.apache.org") || urlStr.contains("plugins.gradle.org")) {
-                        repo.url = uri('$PRIMARY_MIRROR')
+                        repo.url = uri('$SAFE_PRIMARY_MIRROR')
                         $CREDENTIALS_BLOCK
                     }
                 }
@@ -364,7 +383,7 @@ allprojects {
             if (repo instanceof MavenArtifactRepository) {
                 def urlStr = repo.url.toString()
                 if (urlStr.contains("dl.google.com") || urlStr.contains("repo.maven.apache.org") || urlStr.contains("plugins.gradle.org")) {
-                    repo.url = uri('$PRIMARY_MIRROR')
+                    repo.url = uri('$SAFE_PRIMARY_MIRROR')
                     $CREDENTIALS_BLOCK
                 }
             }
@@ -429,8 +448,12 @@ if [ -n "$REMOTE_CACHE_URL" ] && [ -d "$GRADLE_DIR/init.d" ]; then
     CACHE_PUSH="${GRADLE_BUILD_CACHE_PUSH:-true}"
     CACHE_CREDS=""
     if [ -n "$CACHE_USER" ] && [ -n "$CACHE_PASS" ]; then
-        CACHE_CREDS="credentials { username = '$CACHE_USER'; password = '$CACHE_PASS' }"
+        SAFE_CACHE_USER=$(escape_groovy_single_quotes "$CACHE_USER")
+        SAFE_CACHE_PASS=$(escape_groovy_single_quotes "$CACHE_PASS")
+        CACHE_CREDS="credentials { username = '$SAFE_CACHE_USER'; password = '$SAFE_CACHE_PASS' }"
     fi
+
+    SAFE_REMOTE_CACHE_URL=$(escape_groovy_single_quotes "$REMOTE_CACHE_URL")
 
     cat <<EOF > "$GRADLE_DIR/init.d/remote-build-cache.init.gradle"
 import org.gradle.caching.http.HttpBuildCache
@@ -441,7 +464,7 @@ settingsEvaluated { settings ->
             enabled = true
         }
         remote(HttpBuildCache) {
-            url = uri('$REMOTE_CACHE_URL')
+            url = uri('$SAFE_REMOTE_CACHE_URL')
             push = $CACHE_PUSH
             $CACHE_CREDS
         }
@@ -455,7 +478,8 @@ fi
 # ------------------------------------------------------------------------------
 AVD_DIR="${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
 mkdir -p /builds /project /certificates "$AVD_DIR" 2>/dev/null || true
-chmod 777 /opt /opt/default-jdk /builds /project /certificates 2>/dev/null || true
+chmod 1777 /opt 2>/dev/null || true
+chmod 777 /opt/default-jdk /builds /project /certificates 2>/dev/null || true
 chmod -R 777 "$GRADLE_DIR" "$AVD_DIR" 2>/dev/null || true
 if [ -e /dev/kvm ] && [ "$(id -u)" -eq 0 ]; then
     chmod 666 /dev/kvm 2>/dev/null || true

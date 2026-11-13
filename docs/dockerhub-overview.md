@@ -182,6 +182,7 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `NEXUS_RUBY_URL` | `https://nexus.corp/rubygems` | Auto-derived | Configures Bundler and RubyGems mirror (auto-derived from `NEXUS_URL` if omitted). |
 | `OFFLINE_MODE` | `true`, `false` | `false` | Opt-in: enforces strict offline build execution (`startParameter.offline=true`). |
 | `CORPORATE_CA_URL` | URL string | *None* | Downloads and imports corporate SSL certificate on startup. |
+| `INSECURE_CA_DOWNLOAD` | `true`, `false` | `false` | Disables TLS verification strictly during initial CA download if bootstrap cert is self-signed. |
 | `GRADLE_BUILD_CACHE_URL` | URL string | *None* | Configures remote HTTP Gradle build caching in `init.d`. |
 
 ---
