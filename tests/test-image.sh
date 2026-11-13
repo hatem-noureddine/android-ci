@@ -232,6 +232,19 @@ else
 fi
 rm -rf "$TEST_ENTRY_AUTO"
 
+echo "Testing normal default operation (no premature offline lock)..."
+TEST_NORMAL_DIR="/tmp/test_entry_normal"
+mkdir -p "$TEST_NORMAL_DIR"
+GRADLE_USER_HOME="$TEST_NORMAL_DIR" \
+/entrypoint.sh echo "Normal mode test"
+if [ ! -f "$TEST_NORMAL_DIR/init.d/fallback-offline.init.gradle" ]; then
+    echo -e "${GREEN}✔ Normal operation preserved: no offline fallback lock injected by default!${RESET}"
+else
+    echo -e "${RED}✘ Normal operation broken: fallback-offline.init.gradle injected unexpectedly!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_NORMAL_DIR"
+
 echo "Testing enterprise Ruby & Fastlane mirror (NEXUS_RUBY_URL)..."
 TEST_RUBY_DIR="/tmp/test_entry_ruby"
 mkdir -p "$TEST_RUBY_DIR"
@@ -246,7 +259,21 @@ else
 fi
 rm -rf "$TEST_RUBY_DIR"
 
-echo "Testing graceful offline fallback mode (OFFLINE_MODE=true)..."
+echo "Testing enterprise Ruby mirror auto-derivation from NEXUS_URL..."
+TEST_DERIVED_DIR="/tmp/test_entry_derived"
+mkdir -p "$TEST_DERIVED_DIR"
+NEXUS_URL="https://nexus.test.internal/repository/maven-public" \
+GRADLE_USER_HOME="$TEST_DERIVED_DIR" \
+/entrypoint.sh echo "Ruby mirror auto-derivation test"
+if bundle config get mirror.https://rubygems.org 2>&1 | grep -q "rubygems-group"; then
+    echo -e "${GREEN}✔ Bundler mirror successfully auto-derived from NEXUS_URL!${RESET}"
+else
+    echo -e "${RED}✘ Bundler mirror auto-derivation from NEXUS_URL failed!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_DERIVED_DIR"
+
+echo "Testing strict offline mode (OFFLINE_MODE=true)..."
 TEST_OFFLINE_DIR="/tmp/test_entry_offline"
 mkdir -p "$TEST_OFFLINE_DIR"
 OFFLINE_MODE="true" \
@@ -254,9 +281,9 @@ GRADLE_USER_HOME="$TEST_OFFLINE_DIR" \
 /entrypoint.sh echo "Offline test"
 if [ -f "$TEST_OFFLINE_DIR/init.d/fallback-offline.init.gradle" ] && \
    grep -q "startParameter.offline = true" "$TEST_OFFLINE_DIR/init.d/fallback-offline.init.gradle"; then
-    echo -e "${GREEN}✔ Graceful offline fallback init-script correctly injected!${RESET}"
+    echo -e "${GREEN}✔ Strict offline mode init-script correctly injected!${RESET}"
 else
-    echo -e "${RED}✘ Offline fallback script missing or malformed!${RESET}"
+    echo -e "${RED}✘ Offline mode script missing or malformed!${RESET}"
     exit 1
 fi
 rm -rf "$TEST_OFFLINE_DIR"

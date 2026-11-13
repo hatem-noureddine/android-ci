@@ -17,15 +17,13 @@ Enterprise CI/CD environments frequently operate behind strict air-gapped perime
 - Maintain rootless security and compatibility with arbitrary UIDs.
 
 ## Decision Outcome
-1. **Ruby Nexus Mirroring**:
+1. **Ruby Nexus Mirroring & Auto-Derivation**:
    - Introduce `NEXUS_RUBY_URL` (with aliases `RUBYGEM_MIRROR_URL`, `RUBY_MIRROR_URL`).
-   - `entrypoint.sh` automatically executes `bundle config set --global mirror.https://rubygems.org "${NEXUS_RUBY_URL}"` and updates `gem sources`.
+   - If `NEXUS_RUBY_URL` is omitted but `NEXUS_URL` is defined, auto-derive the Ruby mirror target path (e.g. `${NEXUS_BASE}/repository/rubygems-group/`).
+   - Dual-injection: Sets both native Bundler environment variables (`BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/`) and global configuration (`bundle config set --global`) with universal 777 permissions on `/home/runner/.bundle`.
    - If `NEXUS_USER` & `NEXUS_PASSWORD` are provided, Bundler authentication is automatically configured.
    - If no mirror variable is provided, standard public RubyGems is retained.
-2. **Graceful Offline Fallback Engine**:
-   - A single 2-second reachability probe evaluates target connectivity (Nexus or Google).
-   - If the probe times out or fails (or if `OFFLINE_MODE=true` is set):
-     - Skip all external downloads immediately (0ms blocking delay).
-     - Dynamically generate `${GRADLE_USER_HOME}/init.d/fallback-offline.init.gradle` injecting `gradle.startParameter.offline = true`.
-     - Set `BUNDLE_OFFLINE=true`.
-     - Output an informative banner so pipelines succeed using cached dependencies instead of throwing `SocketTimeoutException`.
+2. **Preserving 100% Normal Operation & Opt-In Offline Mode**:
+   - By default, the container operates completely normally, with full network access for Gradle, Bundler, and SDK tooling.
+   - The initial 2-second reachability probe ONLY gates container startup SDK/NDK auto-downloads to avoid stalling air-gapped CI; it NEVER forcibly locks Gradle into offline mode.
+   - Strict offline build execution (`startParameter.offline = true` and `BUNDLE_OFFLINE=true`) is activated exclusively when `OFFLINE_MODE=true` is explicitly requested by the user.
