@@ -111,21 +111,24 @@ can_reach_network() {
     curl -s -m 2 -o /dev/null "$probe_target" 2>/dev/null
 }
 
-# Network reachability evaluation & Graceful Offline Fallback Engine
+# Network reachability evaluation & Offline Mode Engine
 NETWORK_REACHABLE=true
-if ! can_reach_network; then
+if [ "${OFFLINE_MODE:-false}" = "true" ]; then
     NETWORK_REACHABLE=false
-    echo "ℹ️  [network] Target unreachable or OFFLINE_MODE active. Enabling offline safeguards."
-    if [ "${ENABLE_OFFLINE_FALLBACK:-true}" != "false" ] && [ -d "$GRADLE_DIR/init.d" ]; then
-        echo "⚡ [offline-fallback] Injected Gradle offline mode fallback (startParameter.offline = true)"
+    echo "🔒 [offline-mode] Explicit OFFLINE_MODE active. Enabling offline build safeguards."
+    if [ -d "$GRADLE_DIR/init.d" ]; then
+        echo "⚡ [offline-mode] Injected Gradle offline mode fallback (startParameter.offline = true)"
         cat << 'EOF' > "$GRADLE_DIR/init.d/fallback-offline.init.gradle"
 gradle.startParameter.offline = true
 gradle.projectsLoaded {
-    rootProject.logger.warn("⚠️ [hateum/android-ci-box] Network unreachable: Offline fallback active (startParameter.offline=true)")
+    rootProject.logger.warn("⚠️ [hateum/android-ci-box] Strict OFFLINE_MODE active (startParameter.offline=true)")
 }
 EOF
         export BUNDLE_OFFLINE="true"
     fi
+elif ! can_reach_network; then
+    NETWORK_REACHABLE=false
+    echo "ℹ️  [network-probe] Target mirror/network unreachable. Skipping startup SDK/NDK auto-downloads."
 fi
 
 # Apply / Install Android SDK Platform
@@ -374,11 +377,35 @@ fi
 
 # ------------------------------------------------------------------------------
 # 4.1 Enterprise Ruby & Fastlane Gem Mirror (Bundler & RubyGems)
-# Active if NEXUS_RUBY_URL, RUBYGEM_MIRROR_URL, or RUBY_MIRROR_URL is defined
+# Priority: Explicit NEXUS_RUBY_URL / RUBYGEM_MIRROR_URL / RUBY_MIRROR_URL
+# Fallback: Auto-derivation from NEXUS_URL if NEXUS_RUBY_URL is not provided
 # ------------------------------------------------------------------------------
 RUBY_MIRROR_TARGET="${NEXUS_RUBY_URL:-${RUBYGEM_MIRROR_URL:-${RUBY_MIRROR_URL:-}}}"
+if [ -z "$RUBY_MIRROR_TARGET" ] && [ -n "${NEXUS_URL:-}" ]; then
+    NEXUS_BASE="${NEXUS_URL%/}"
+    if [[ "$NEXUS_BASE" == *"/repository/"* ]]; then
+        NEXUS_PREFIX="${NEXUS_BASE%%/repository/*}"
+        RUBY_MIRROR_TARGET="${NEXUS_PREFIX}/repository/rubygems-group/"
+    elif [[ "$NEXUS_BASE" == *"/artifactory/"* ]]; then
+        NEXUS_PREFIX="${NEXUS_BASE%%/artifactory/*}"
+        RUBY_MIRROR_TARGET="${NEXUS_PREFIX}/artifactory/api/gems/gems/"
+    else
+        RUBY_MIRROR_TARGET="${NEXUS_BASE}/repository/rubygems-group/"
+    fi
+fi
+
 if [ -n "$RUBY_MIRROR_TARGET" ]; then
-    echo "💎 [ruby-mirror] Configuring Bundler & RubyGems mirror: ${RUBY_MIRROR_TARGET}"
+    echo "💎 [ruby-mirror] Active RubyGems mirror: ${RUBY_MIRROR_TARGET}"
+
+    # 1. Native Bundler environment variables (highest precedence, universal rootless)
+    export BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/="${RUBY_MIRROR_TARGET}"
+    export BUNDLE_MIRROR__HTTP://RUBYGEMS__ORG/="${RUBY_MIRROR_TARGET}"
+    export BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG="${RUBY_MIRROR_TARGET}"
+    export BUNDLE_MIRROR__HTTP://RUBYGEMS__ORG="${RUBY_MIRROR_TARGET}"
+
+    # 2. Global Bundler configuration file with universal permissions
+    mkdir -p /home/runner/.bundle 2>/dev/null || true
+    chmod -R 777 /home/runner/.bundle 2>/dev/null || true
     if command -v bundle >/dev/null 2>&1; then
         bundle config set --global mirror.https://rubygems.org "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
         bundle config set --global mirror.https://rubygems.org/ "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
@@ -387,8 +414,11 @@ if [ -n "$RUBY_MIRROR_TARGET" ]; then
         RUBY_AUTH_PASS="${NEXUS_RUBY_PASSWORD:-${NEXUS_PASSWORD:-}}"
         if [ -n "$RUBY_AUTH_USER" ] && [ -n "$RUBY_AUTH_PASS" ]; then
             bundle config set --global "${RUBY_MIRROR_TARGET}" "${RUBY_AUTH_USER}:${RUBY_AUTH_PASS}" 2>/dev/null || true
+            export BUNDLE_HTTPS://RUBYGEMS__ORG/="${RUBY_AUTH_USER}:${RUBY_AUTH_PASS}"
         fi
     fi
+
+    # 3. RubyGems CLI source
     if command -v gem >/dev/null 2>&1; then
         gem sources --add "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
         gem sources --remove https://rubygems.org/ 2>/dev/null || true

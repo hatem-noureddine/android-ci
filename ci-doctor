@@ -99,6 +99,16 @@ PROXY_VAL="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
 CA_COUNT=$(find /certificates /usr/local/share/ca-certificates -maxdepth 1 \( -name "*.crt" -o -name "*.pem" \) 2>/dev/null | wc -l)
 MIRROR_VAL="${NEXUS_URLS:-${NEXUS_URL:-${INTERNAL_MAVEN_URL:-}}}"
 RUBY_MIRROR_VAL="${NEXUS_RUBY_URL:-${RUBYGEM_MIRROR_URL:-${RUBY_MIRROR_URL:-}}}"
+if [ -z "$RUBY_MIRROR_VAL" ] && [ -n "${NEXUS_URL:-}" ]; then
+    NEXUS_BASE="${NEXUS_URL%/}"
+    if [[ "$NEXUS_BASE" == *"/repository/"* ]]; then
+        RUBY_MIRROR_VAL="${NEXUS_BASE%%/repository/*}/repository/rubygems-group/"
+    elif [[ "$NEXUS_BASE" == *"/artifactory/"* ]]; then
+        RUBY_MIRROR_VAL="${NEXUS_BASE%%/artifactory/*}/artifactory/api/gems/gems/"
+    else
+        RUBY_MIRROR_VAL="${NEXUS_BASE}/repository/rubygems-group/"
+    fi
+fi
 CACHE_VAL="${GRADLE_BUILD_CACHE_URL:-${GRADLE_REMOTE_CACHE_URL:-}}"
 OFFLINE_STATUS="disabled"
 if [ "${OFFLINE_MODE:-false}" = "true" ] || [ -f "${GRADLE_USER_HOME:-/home/runner/.gradle}/init.d/fallback-offline.init.gradle" ]; then
@@ -153,7 +163,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.4.1",
+  "version": "1.4.2",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",

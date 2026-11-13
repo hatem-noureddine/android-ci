@@ -179,9 +179,8 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `HTTP_PROXY` / `HTTPS_PROXY`| `http://proxy:8080` | *None* | Injected into `~/.gradle/gradle.properties` automatically. |
 | `NO_PROXY` | `localhost,127.0.0.1,.corp` | *None* | Converted to Java pipe-delimited format for `gradle.properties`. |
 | `NEXUS_URL` | `https://nexus.corp/repository`| *None* | Derives mirror hooks for Google, MavenCentral, GradlePortal. |
-| `NEXUS_RUBY_URL` | `https://nexus.corp/rubygems` | *None* | Configures Bundler (`mirror.https://rubygems.org`) and RubyGems mirror. |
-| `OFFLINE_MODE` | `true`, `false` | `false` | Enforces 100% offline execution and skips all network probes. |
-| `ENABLE_OFFLINE_FALLBACK` | `true`, `false` | `true` | Automatically injects `gradle.startParameter.offline=true` on network failure. |
+| `NEXUS_RUBY_URL` | `https://nexus.corp/rubygems` | Auto-derived | Configures Bundler and RubyGems mirror (auto-derived from `NEXUS_URL` if omitted). |
+| `OFFLINE_MODE` | `true`, `false` | `false` | Opt-in: enforces strict offline build execution (`startParameter.offline=true`). |
 | `CORPORATE_CA_URL` | URL string | *None* | Downloads and imports corporate SSL certificate on startup. |
 | `GRADLE_BUILD_CACHE_URL` | URL string | *None* | Configures remote HTTP Gradle build caching in `init.d`. |
 
