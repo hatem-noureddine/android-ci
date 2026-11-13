@@ -78,6 +78,8 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          scanners: 'vuln'
+          ignore-unfixed: true
           trivyignores: '.trivyignore'
           exit-code: '0'
 
@@ -86,6 +88,7 @@ jobs:
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
+          category: 'container-trivy'
 
       - name: Enforce Zero Unfixed Critical Vulnerabilities
         uses: aquasecurity/trivy-action@v0.36.0
