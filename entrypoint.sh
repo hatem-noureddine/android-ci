@@ -397,14 +397,8 @@ fi
 if [ -n "$RUBY_MIRROR_TARGET" ]; then
     echo "💎 [ruby-mirror] Active RubyGems mirror: ${RUBY_MIRROR_TARGET}"
 
-    # 1. Native Bundler environment variables (highest precedence, universal rootless)
-    export BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/="${RUBY_MIRROR_TARGET}"
-    export BUNDLE_MIRROR__HTTP://RUBYGEMS__ORG/="${RUBY_MIRROR_TARGET}"
-    export BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG="${RUBY_MIRROR_TARGET}"
-    export BUNDLE_MIRROR__HTTP://RUBYGEMS__ORG="${RUBY_MIRROR_TARGET}"
-
-    # 2. Global Bundler configuration file with universal permissions
-    mkdir -p /home/runner/.bundle 2>/dev/null || true
+    # Global Bundler configuration file with universal permissions
+    mkdir -p /home/runner/.bundle /root/.bundle 2>/dev/null || true
     chmod -R 777 /home/runner/.bundle 2>/dev/null || true
     if command -v bundle >/dev/null 2>&1; then
         bundle config set --global mirror.https://rubygems.org "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
@@ -414,11 +408,10 @@ if [ -n "$RUBY_MIRROR_TARGET" ]; then
         RUBY_AUTH_PASS="${NEXUS_RUBY_PASSWORD:-${NEXUS_PASSWORD:-}}"
         if [ -n "$RUBY_AUTH_USER" ] && [ -n "$RUBY_AUTH_PASS" ]; then
             bundle config set --global "${RUBY_MIRROR_TARGET}" "${RUBY_AUTH_USER}:${RUBY_AUTH_PASS}" 2>/dev/null || true
-            export BUNDLE_HTTPS://RUBYGEMS__ORG/="${RUBY_AUTH_USER}:${RUBY_AUTH_PASS}"
         fi
     fi
 
-    # 3. RubyGems CLI source
+    # RubyGems CLI source
     if command -v gem >/dev/null 2>&1; then
         gem sources --add "${RUBY_MIRROR_TARGET}" 2>/dev/null || true
         gem sources --remove https://rubygems.org/ 2>/dev/null || true
