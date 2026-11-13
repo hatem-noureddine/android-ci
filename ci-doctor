@@ -66,7 +66,13 @@ fi
 
 # 4. Automation & Deployment Tooling
 GRADLE_VER=""
-if command -v gradle >/dev/null 2>&1; then
+if [ -d "/opt/gradle" ]; then
+    GRADLE_DIR_NAME=$(find /opt/gradle -maxdepth 1 -name "gradle-*" 2>/dev/null | head -n 1)
+    if [ -n "$GRADLE_DIR_NAME" ]; then
+        GRADLE_VER="${GRADLE_DIR_NAME##*gradle-}"
+    fi
+fi
+if [ -z "$GRADLE_VER" ] && command -v gradle >/dev/null 2>&1; then
     GRADLE_VER=$(gradle -version 2>&1 | grep -E '^Gradle [0-9]' | head -n 1 | awk '{print $2}')
 fi
 FASTLANE_VER=""
@@ -75,7 +81,7 @@ if command -v fastlane >/dev/null 2>&1; then
 fi
 BUNDLETOOL_VER=""
 if command -v bundletool >/dev/null 2>&1; then
-    BUNDLETOOL_VER="1.18.3"
+    BUNDLETOOL_VER=$(bundletool version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n 1 || echo "active")
 fi
 ANDROID_CLI_VER=""
 if command -v android >/dev/null 2>&1; then
@@ -151,7 +157,8 @@ if [ "$MODE" = "json" ]; then
 
     clean_token() {
         local val="${1//\"/}"
-        echo "${val//\\/}"
+        val="${val//\\/}"
+        printf '%s' "$val" | tr '\r\n\t' ' '
     }
 
     FORMATTED_JDKS=$(echo "$AVAILABLE_JDKS" | awk '{for(i=1;i<=NF;i++) printf "\"%s\"%s", $i, (i<NF?", ":"")}')
@@ -163,7 +170,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.4.4",
+  "version": "1.4.5",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
@@ -218,7 +225,7 @@ fi
 # ------------------------------------------------------------------------------
 # Full Interactive Terminal Diagnostic
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}${CYAN}=== Android CI Doctor (hateum/android-ci-box) ===${RESET}\n"
+echo -e "${BOLD}${CYAN}=== Android CI Doctor (hateum/android-ci-box v1.4.5) ===${RESET}\n"
 
 echo -e "${BOLD}1. System & User Execution${RESET}"
 echo -e "  OS Architecture : ${OS_ARCH} (${DPKG_ARCH})"

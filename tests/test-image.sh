@@ -20,8 +20,9 @@ echo -e "Testing ci-doctor --json output validation..."
 DOCTOR_JSON=$(ci-doctor --json)
 echo "$DOCTOR_JSON" | python3 -m json.tool >/dev/null
 DOCTOR_STATUS=$(echo "$DOCTOR_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('status'))")
-if [ "$DOCTOR_STATUS" != "healthy" ]; then
-    echo -e "${RED}✘ Expected status 'healthy' but got '${DOCTOR_STATUS}'!${RESET}"
+DOCTOR_JAVA_HOME=$(echo "$DOCTOR_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('java', {}).get('java_home', ''))")
+if [ "$DOCTOR_STATUS" != "healthy" ] || [ -z "$DOCTOR_JAVA_HOME" ] || [ "$DOCTOR_JAVA_HOME" = "Not set" ]; then
+    echo -e "${RED}✘ Expected status 'healthy' with valid java_home but got status '${DOCTOR_STATUS}', java_home '${DOCTOR_JAVA_HOME}'!${RESET}"
     exit 1
 fi
 echo -e "${GREEN}✔ ci-doctor passed successfully (Interactive & JSON modes)!${RESET}\n"
@@ -85,9 +86,14 @@ fi
 bundletool version
 fastlane --version
 RUBY_VER=$(ruby -v 2>&1 | awk '{print $2}')
-echo "Ruby active: $RUBY_VER"
+RUBY_PATH=$(which ruby)
+echo "Ruby active: $RUBY_VER (path: $RUBY_PATH)"
 if [[ "$RUBY_VER" != 4.0* ]]; then
     echo -e "${RED}✘ Expected Ruby 4.0.x but got ${RUBY_VER}!${RESET}"
+    exit 1
+fi
+if [[ "$RUBY_PATH" != *"/shims/ruby"* ]] && [[ "$RUBY_PATH" != *"/rbenv/"* ]]; then
+    echo -e "${RED}✘ Expected Ruby to be managed via rbenv shim, got $RUBY_PATH!${RESET}"
     exit 1
 fi
 python3 --version
@@ -244,6 +250,20 @@ else
     exit 1
 fi
 rm -rf "$TEST_NORMAL_DIR"
+
+echo "Testing explicit OFFLINE_MODE=false (guaranteed normal network operation)..."
+TEST_EXPLICIT_OFFLINE_DIR="/tmp/test_entry_explicit_offline"
+mkdir -p "$TEST_EXPLICIT_OFFLINE_DIR"
+OFFLINE_MODE="false" \
+GRADLE_USER_HOME="$TEST_EXPLICIT_OFFLINE_DIR" \
+/entrypoint.sh echo "Explicit online mode test"
+if [ ! -f "$TEST_EXPLICIT_OFFLINE_DIR/init.d/fallback-offline.init.gradle" ]; then
+    echo -e "${GREEN}✔ Explicit OFFLINE_MODE=false preserved normal online mode!${RESET}"
+else
+    echo -e "${RED}✘ Explicit OFFLINE_MODE=false injected fallback-offline.init.gradle!${RESET}"
+    exit 1
+fi
+rm -rf "$TEST_EXPLICIT_OFFLINE_DIR"
 
 echo "Testing enterprise Ruby & Fastlane mirror (NEXUS_RUBY_URL)..."
 TEST_RUBY_DIR="/tmp/test_entry_ruby"

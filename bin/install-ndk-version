@@ -77,8 +77,8 @@ if [ -d "${ANDROID_HOME}/cmake" ]; then
     chmod -R 777 "${ANDROID_HOME}/cmake" 2>/dev/null || true
 fi
 
-# Set default symlink if not already pointing to a valid NDK
-if [ ! -L "${ANDROID_HOME}/ndk/default" ] && [ -d "$NDK_DIR" ]; then
+# Set or update default symlink to current NDK
+if [ -d "$NDK_DIR" ]; then
     ln -snf "$NDK_DIR" "${ANDROID_HOME}/ndk/default" 2>/dev/null || true
 fi
 
