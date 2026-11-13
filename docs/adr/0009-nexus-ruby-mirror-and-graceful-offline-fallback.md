@@ -20,7 +20,7 @@ Enterprise CI/CD environments frequently operate behind strict air-gapped perime
 1. **Ruby Nexus Mirroring & Auto-Derivation**:
    - Introduce `NEXUS_RUBY_URL` (with aliases `RUBYGEM_MIRROR_URL`, `RUBY_MIRROR_URL`).
    - If `NEXUS_RUBY_URL` is omitted but `NEXUS_URL` is defined, auto-derive the Ruby mirror target path (e.g. `${NEXUS_BASE}/repository/rubygems-group/`).
-   - Dual-injection: Sets both native Bundler environment variables (`BUNDLE_MIRROR__HTTPS://RUBYGEMS__ORG/`) and global configuration (`bundle config set --global`) with universal 777 permissions on `/home/runner/.bundle`.
+   - Dual-injection: Sets both global configuration (`bundle config set --global`) with universal 777 permissions on `/home/runner/.bundle`, and updates RubyGems source list (`gem sources`).
    - If `NEXUS_USER` & `NEXUS_PASSWORD` are provided, Bundler authentication is automatically configured.
    - If no mirror variable is provided, standard public RubyGems is retained.
 2. **Preserving 100% Normal Operation & Opt-In Offline Mode**:

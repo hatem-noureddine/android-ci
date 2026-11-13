@@ -288,6 +288,30 @@ else
 fi
 rm -rf "$TEST_OFFLINE_DIR"
 
+echo "Testing Groovy injection sanitization (special characters in Nexus credentials & URLs)..."
+TEST_ESCAPE_DIR="/tmp/test_entry_escape"
+mkdir -p "$TEST_ESCAPE_DIR"
+NEXUS_URL="https://nexus.test.internal/repository/maven-public" \
+NEXUS_USER="ci'user\$inject" \
+NEXUS_PASSWORD="p'ass\$word" \
+GRADLE_USER_HOME="$TEST_ESCAPE_DIR" \
+/entrypoint.sh echo "Groovy escape test"
+if [ -f "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" ] && \
+   python3 - "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" << 'PYEOF'
+import sys
+content = open(sys.argv[1]).read()
+assert "ci\\'user" in content, "Sanitized username missing"
+assert "p\\'ass" in content, "Sanitized password missing"
+PYEOF
+then
+    echo -e "${GREEN}✔ Groovy single-quote & dollar injection sanitization verified!${RESET}"
+else
+    echo -e "${RED}✘ Groovy credential injection sanitization failed!${RESET}"
+    cat "$TEST_ESCAPE_DIR/init.d/nexus-mirror.init.gradle" || true
+    exit 1
+fi
+rm -rf "$TEST_ESCAPE_DIR"
+
 echo -e "${GREEN}✔ Enterprise network integration & runtime customization verified!${RESET}\n"
 
 # ------------------------------------------------------------------------------
