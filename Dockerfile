@@ -88,9 +88,11 @@ RUN apt-get update -qq && \
     LFS_VERSION="3.8.1" && \
     curl -fsSL "https://github.com/git-lfs/git-lfs/releases/download/v${LFS_VERSION}/git-lfs-linux-${ARCH}-v${LFS_VERSION}.tar.gz" -o /tmp/git-lfs.tar.gz && \
     mkdir -p /tmp/git-lfs && \
-    tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs && \
+    tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs --strip-components=1 && \
     /tmp/git-lfs/install.sh && \
     rm -rf /tmp/git-lfs /tmp/git-lfs.tar.gz && \
+    mkdir -p /etc && \
+    printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
     python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
     rm -rf /usr/lib/python3/dist-packages/setuptools* /usr/lib/python3/dist-packages/wheel* && \
     locale-gen "${LANG}" && \
@@ -100,8 +102,6 @@ RUN apt-get update -qq && \
     (id -u runner >/dev/null 2>&1 || useradd -u 1000 -g 0 -m -s /bin/bash runner) && \
     mkdir -p /home/runner/.gradle /root && \
     ln -sf /home/runner/.gradle /root/.gradle && \
-    mkdir -p /etc && \
-    printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
     ln -s "/usr/lib/jvm/java-21-openjdk-${ARCH}" /opt/jdk-21 && \
     ln -s "/usr/lib/jvm/java-17-openjdk-${ARCH}" /opt/jdk-17 && \
     ln -s /opt/jdk-21 /opt/default-jdk && \
