@@ -43,7 +43,6 @@ RUN apt-get update -qq && \
         curl \
         file \
         git \
-        git-lfs \
         gnupg \
         libasound2t64 \
         libegl1 \
@@ -86,6 +85,14 @@ RUN apt-get update -qq && \
         apt-get update -qq && \
         apt-get install -qq -y --no-install-recommends libc6:amd64 libstdc++6:amd64 zlib1g:amd64; \
     fi && \
+    LFS_VERSION="3.8.1" && \
+    curl -fsSL "https://github.com/git-lfs/git-lfs/releases/download/v${LFS_VERSION}/git-lfs-linux-${ARCH}-v${LFS_VERSION}.tar.gz" -o /tmp/git-lfs.tar.gz && \
+    mkdir -p /tmp/git-lfs && \
+    tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs && \
+    /tmp/git-lfs/install.sh && \
+    rm -rf /tmp/git-lfs /tmp/git-lfs.tar.gz && \
+    python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    rm -rf /usr/lib/python3/dist-packages/setuptools* /usr/lib/python3/dist-packages/wheel* && \
     locale-gen "${LANG}" && \
     update-locale LANG="${LANG}" LC_ALL="${LC_ALL}" && \
     touch /etc/subuid /etc/subgid && \
@@ -120,7 +127,8 @@ RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
     chmod -R 755 "${RBENV_ROOT}" && \
     MAKE_OPTS="-j$(nproc)" RUBY_CONFIGURE_OPTS="--disable-install-doc --disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
     "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
-    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" json --no-document && \
+    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" "json:3.1.0" --no-document && \
+    rm -f "${RBENV_ROOT}/versions/${RUBY_VERSION}/lib/ruby/gems/4.0.0/specifications/default/json-2.18.0.gemspec" && \
     "${RBENV_ROOT}/bin/rbenv" rehash && \
     chmod -R 777 "${RBENV_ROOT}" && \
     rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
@@ -165,6 +173,22 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
         "build-tools;36.0.0" \
         "build-tools;37.0.0" && \
     ln -snf "${ANDROID_HOME}/platforms/android-37.0" "${ANDROID_HOME}/platforms/android-37" && \
+    rm -rf "${ANDROID_HOME}/cmdline-tools/latest/lib/external/lint-psi" && \
+    BC_VERSION="1.87" && \
+    BC_DIR="${ANDROID_HOME}/cmdline-tools/latest/lib/external/org/bouncycastle" && \
+    if [ -d "${BC_DIR}" ]; then \
+        rm -rf "${BC_DIR}/bcprov-jdk18on"/* "${BC_DIR}/bcpkix-jdk18on"/* && \
+        mkdir -p "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}" "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}" && \
+        curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" && \
+        curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar"; \
+    fi && \
+    GUAVA_VERSION="33.8.0-jre" && \
+    GUAVA_DIR="${ANDROID_HOME}/cmdline-tools/latest/lib/external/com/google/guava/guava" && \
+    if [ -d "${GUAVA_DIR}" ]; then \
+        rm -rf "${GUAVA_DIR}"/* && \
+        mkdir -p "${GUAVA_DIR}/${GUAVA_VERSION}" && \
+        curl -fsSL "https://repo1.maven.org/maven2/com/google/guava/guava/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" -o "${GUAVA_DIR}/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar"; \
+    fi && \
     mkdir -p /opt/bundletool && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \

@@ -38,7 +38,7 @@ Standard Android images require agents to write fragile multi-line shell scripts
 
 ## 📄 Agent Skill Reference (`.agents/skills/android-ci-box/`)
 
-The repository includes a production-ready AI Agent Skill at [`.agents/skills/android-ci-box/SKILL.md`](../.agents/skills/android-ci-box/SKILL.md).
+The repository includes a production-ready AI Agent Skill at [`.agents/skills/android-ci-box/SKILL.md`](https://github.com/hatem-noureddine/android-ci/blob/main/.agents/skills/android-ci-box/SKILL.md).
 
 ### What the skill teaches AI agents:
 1. **Zero Permission Leaks**: Always respect rootless execution (never attempt `sudo apt-get` inside running pipelines).

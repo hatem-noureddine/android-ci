@@ -11,19 +11,17 @@
 
 A battle-tested, high-performance, and rootless Docker container engineered for **Android CI/CD automation** across **GitHub Actions**, **GitLab CI**, **Jenkins**, **Bitbucket Pipelines**, **CircleCI**, and **Azure DevOps**.
 
-Features a **dual-mode network engine** (public internet & enterprise intranet with auto-proxy, custom CA certificates, and Nexus mirrors), **native multi-arch compilation** (`amd64` and `arm64`), **zero-config dynamic auto-detection** of project SDK and Java toolchains, and **built-in skills for AI coding agents**.
-
 ---
 
-## 🚀 Quick Start (30 Seconds)
+## ⚡ Quickstart (30 Seconds)
 
-Run a complete Android build inside the container in one command:
+Execute a complete Android build inside the container:
 
 ```bash
 docker run --rm -v "$(pwd):/project" hateum/android-ci-box:latest ./gradlew test lintRelease assembleRelease
 ```
 
-Or run an interactive diagnostic probe:
+Or run an interactive system diagnostic probe:
 
 ```bash
 docker run --rm hateum/android-ci-box:latest ci-doctor
@@ -31,31 +29,32 @@ docker run --rm hateum/android-ci-box:latest ci-doctor
 
 ---
 
-## ⚖️ Why `hateum/android-ci-box`? (Feature Comparison)
+## 🧭 Documentation Pillars
 
-| Capability | Standard Android CI Images | `hateum/android-ci-box` |
-| :--- | :--- | :--- |
-| **Silicon Architecture** | `x86_64` only (Emulated on ARM via slow QEMU) | **Native Multi-Arch (`amd64` + `arm64`)** (Full native speed on Apple Silicon & AWS Graviton) |
-| **Project Setup** | Manual SDK/JDK setup scripts per repo | **Zero-Config Dynamic Auto-Detection** (`compileSdk`, `buildTools`, Java 17/21) in <50ms |
-| **Java Runtimes** | Single JDK version (fixed at build time) | **Dual-JDK (OpenJDK 21 + 17)** with instant CLI/Env toggle (`switch-jdk`) |
-| **Security & Permissions**| Hardcoded `root` (fails on OpenShift/K8s) | **Universal Rootless (777 permissions)**, runs safely under any UID (`1000:0`, `1001:1001`) |
-| **Vulnerability Audit** | Often contains unpatched high/critical CVEs | **Zero Unfixed Critical CVEs** (strictly audited via Trivy SARIF gates) |
-| **Enterprise Network** | Custom Dockerfiles required for proxies & certs | **Auto-imported CA certs, automatic HTTP proxy & Nexus/Artifactory mirror derivation** |
-| **Deployment Tools** | Slow `gem install fastlane` on every build | **Precompiled Ruby 4.0.9 + Fastlane 2.241.2** ready out-of-the-box in `/opt/rbenv` |
-| **C/C++ NDK & CMake** | Missing or forces massive 4GB+ image size | **Dynamic On-Demand Engine (`install-ndk-version` & `INSTALL_NDK_VERSION`)** |
-| **GitHub Action Integration** | Raw container scripting required | **Official Composite Action (`uses: hatem-noureddine/android-ci@v1`)** |
-| **Build Performance Tuning** | Default Gradle daemon issues in Docker | **Auto-injected CI Optimization Init-Script (Parallel, Caching, VFS off)** |
-| **Testing & Emulation** | Complex X11/VNC setup or broken display | **Native Gradle Managed Devices (GMD)** with SwiftShader Headless GPU acceleration |
-| **AI Agent Support** | No agent guidance or helpers | **AI Agent Skill (`.agents/skills`) & CLI helpers (`ci-doctor`, `detect-android-project`)** |
+<div class="card-grid">
+  <div class="card">
+    <h3>🏛️ Architecture & Lifecycles</h3>
+    <p>6-tier architecture, native multi-arch matrix (<code>amd64</code> & <code>arm64</code>), dual-mode network agnosticism, and rootless POSIX permissions.</p>
+    <p><a href="#/architecture">Explore Architecture →</a></p>
+  </div>
+  <div class="card">
+    <h3>🚀 CI/CD Integrations</h3>
+    <p>Production-ready, copy-pasteable configurations for GitHub Actions, GitLab CI, Jenkins, Bitbucket, CircleCI, and Azure DevOps.</p>
+    <p><a href="#/ci-integrations">View CI Pipelines →</a></p>
+  </div>
+  <div class="card">
+    <h3>🤖 AI Agents & Skills</h3>
+    <p>Closed-loop diagnostic protocols and purpose-built CLI helpers designed for autonomous coding agents (Antigravity, Claude Code, Copilot).</p>
+    <p><a href="#/ai-agents">Read Agent Playbook →</a></p>
+  </div>
+</div>
 
 ---
 
-## 📚 Documentation Chapters
+## 🌟 Key Highlights
 
-Explore the complete documentation:
-
-- 🏛️ **[6-Tier Architecture & Diagrams](architecture.md)** — Architectural tiers, dual-mode network flowcharts, and rootless permission mechanics.
-- 🛠️ **[CI/CD Integration Guides](ci-integrations.md)** — Ready-to-use recipes for GitHub Actions, GitLab CI, Jenkins, Bitbucket, CircleCI, and Azure DevOps.
-- 🤖 **[AI Agents & Autonomous Workflows](ai-agents.md)** — Closed-loop execution loops and skill references for Antigravity, Claude Code, and Copilot.
-- 📋 **[Architecture Decision Records (ADRs)](adr/README.md)** — Complete historical record of all technical choices.
-- 🎯 **[Product Requirements Document (PRD)](PRD.md)** — Scope, requirements, and compliance metrics.
+* **Native Multi-Arch Speed**: Native silicon compilation on both `linux/amd64` (Intel/AMD) and `linux/arm64` (Apple Silicon & AWS Graviton).
+* **Zero-Config Auto-Detection**: Instant scanner (`<50ms`) dynamically auto-detects `compileSdk`, `buildTools`, and Java 17/21 toolchains.
+* **Dual-Mode Network Agnosticism**: Operates transparently on the public internet and behind strict corporate proxies (auto-CA import & Nexus mirrors).
+* **Universal Rootless Security**: Universal `777` permissions and sticky-bit `/opt` allow seamless execution under arbitrary UIDs (e.g. `--user 1000:0` on OpenShift/K8s).
+* **Precompiled Mobile Tooling**: Gradle 9.8.2 standalone, Fastlane 2.241.2 on Ruby 4.0.9, and Bundletool 1.18.3 ready out-of-the-box.
