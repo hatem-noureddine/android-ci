@@ -170,7 +170,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.4.9",
+  "version": "1.5.0",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",

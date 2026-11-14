@@ -18,3 +18,4 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0012](0012-code-scanning-remediation-and-clean-sarif-pipeline.md) | GitHub Code Scanning Remediation & Clean Container SARIF Pipeline | Accepted | 2026-11-13 |
 | [ADR-0013](0013-github-pages-and-comprehensive-documentation-hub.md) | GitHub Pages (Docsify), Native Mermaid Diagrams & CI/CD Showcase | Accepted | 2026-11-14 |
 | [ADR-0014](0014-docker-scout-remediation-and-docsify-polish.md) | Docker Scout Vulnerability Remediation and Documentation Polish | Accepted | 2026-11-14 |
+| [ADR-0015](0015-supply-chain-security-cosign-and-sbom.md) | Supply Chain Security with Keyless Cosign / Sigstore and SPDX SBOM Attestations | Accepted | 2026-11-14 |

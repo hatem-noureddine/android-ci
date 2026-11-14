@@ -4,6 +4,8 @@
 [![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?style=flat-square&logo=github)](https://hatem-noureddine.github.io/android-ci/)
 [![Multi-Arch](https://img.shields.io/badge/architecture-amd64%20%7C%20arm64-blue?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Security](https://img.shields.io/badge/Trivy%20Audit-0%20Critical%20CVEs-brightgreen?style=flat-square&logo=security)](https://github.com/hatem-noureddine/android-ci/security)
+[![Cosign Signed](https://img.shields.io/badge/Sigstore-Cosign%20Signed-blue?style=flat-square&logo=sigstore)](https://github.com/hatem-noureddine/android-ci/releases)
+[![SBOM: SPDX](https://img.shields.io/badge/SBOM-SPDX%20Attested-success?style=flat-square&logo=linuxfoundation)](https://github.com/hatem-noureddine/android-ci/releases)
 [![Gradle](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-API%2035%20%7C%2036%20%7C%2037-34A853?style=flat-square&logo=android)](https://developer.android.com)
 [![Java](https://img.shields.io/badge/OpenJDK-17%20%7C%2021%20(Default)-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org)
@@ -337,6 +339,28 @@ docker run --rm \
   -e NEXUS_PASSWORD="secretPassword123" \
   hateum/android-ci-box:latest ./gradlew assembleRelease
 ```
+
+---
+
+## 🔏 Supply Chain Security & Cryptographic Verification
+
+All container images published to **GHCR** and **Docker Hub** are cryptographically signed with **Sigstore / Cosign** using keyless OpenID Connect (OIDC) identities, and include an in-toto **SPDX Software Bill of Materials (SBOM)** attestation ([ADR-0015](docs/adr/0015-supply-chain-security-cosign-and-sbom.md)).
+
+### 1. Verify Image Signature (Cosign)
+```bash
+cosign verify ghcr.io/hatem-noureddine/android-ci-box:latest \
+  --certificate-identity-regexp "https://github.com/hatem-noureddine/android-ci/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+### 2. Verify and Extract SPDX SBOM Attestation
+```bash
+cosign verify-attestation --type spdxjson ghcr.io/hatem-noureddine/android-ci-box:latest \
+  --certificate-identity-regexp "https://github.com/hatem-noureddine/android-ci/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  | jq -r '.payload' | base64 -d | jq .
+```
+You can also download the raw `android-ci-box-<version>.spdx.json` directly from the [GitHub Releases](https://github.com/hatem-noureddine/android-ci/releases) page.
 
 ---
 
