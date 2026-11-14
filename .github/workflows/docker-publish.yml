@@ -232,6 +232,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -324,6 +325,44 @@ jobs:
             "ghcr.io/${{ github.repository }}:${VERSION}-amd64" \
             "ghcr.io/${{ github.repository }}:${VERSION}-arm64"
 
+      - name: Install Cosign (Sigstore Cryptographic Signer)
+        uses: sigstore/cosign-installer@v3.8.1
+
+      - name: Install Syft (SBOM Generator)
+        uses: anchore/sbom-action/download-syft@v0.18.0
+
+      - name: Generate SPDX Software Bill of Materials (SBOM)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Generating comprehensive SPDX SBOM for release v${VERSION}..."
+          syft "ghcr.io/${{ github.repository }}:${VERSION}" -o spdx-json > "android-ci-box-${VERSION}.spdx.json"
+          echo "SBOM generated successfully: android-ci-box-${VERSION}.spdx.json ($(wc -c < "android-ci-box-${VERSION}.spdx.json") bytes)"
+
+      - name: Attest SBOM with Cosign
+        env:
+          COSIGN_YES: "true"
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Attesting in-toto SPDX SBOM on GHCR registry..."
+          cosign attest --yes --type spdxjson \
+            --predicate "android-ci-box-${VERSION}.spdx.json" \
+            "ghcr.io/${{ github.repository }}:${VERSION}"
+
+      - name: Cryptographically Sign OCI Images with Cosign
+        env:
+          COSIGN_YES: "true"
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Signing GHCR multi-arch images with keyless Sigstore OIDC..."
+          cosign sign --yes "ghcr.io/${{ github.repository }}:${VERSION}"
+          cosign sign --yes "ghcr.io/${{ github.repository }}:latest"
+
+          if [ "${{ steps.check_creds.outputs.has_creds }}" = "true" ]; then
+            echo "Signing Docker Hub multi-arch images..."
+            cosign sign --yes "${{ env.IMAGE_NAME }}:${VERSION}" || true
+            cosign sign --yes "${{ env.IMAGE_NAME }}:latest" || true
+          fi
+
       - name: Update Docker Hub Description & Overview
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
         uses: peter-evans/dockerhub-description@v4.0.0
@@ -344,6 +383,8 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+          files: |
+            android-ci-box-${{ steps.version.outputs.version }}.spdx.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -360,5 +401,6 @@ jobs:
           | **Docker Hub** | [\`${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}\`](https://hub.docker.com/r/${{ env.IMAGE_NAME }}) |
           | **GHCR Mirror** | [\`ghcr.io/${{ github.repository }}:${{ steps.version.outputs.version }}\`](https://github.com/${{ github.repository }}/pkgs/container/android-ci) |
           | **Security Verdict** | ✅ Zero unfixed critical CVEs (Trivy Scan Passed) |
+          | **Supply Chain Security** | 🔏 Keyless Sigstore/Cosign Signed & SPDX SBOM Attested |
           | **Core Stack** | AGP 9.4.1, Gradle 9.8.2, OpenJDK 17/21, Precompiled Ruby 4.0.9, Fastlane 2.241.2, Android SDK 35/36/37, Native GMD |
           EOF

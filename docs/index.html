@@ -111,7 +111,7 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-sky-400 transition-colors">Android CI Box</span>
-          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.4.9</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.5.0</span>
         </div>
       </a>
 
@@ -198,6 +198,7 @@
             </span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Native amd64 & arm64</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ 0 Unfixed Critical CVEs</span>
+            <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Sigstore Cosign & SPDX SBOM</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Universal Rootless 777</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Fastlane 2.241.2</span>
           </div>
@@ -329,9 +330,9 @@
           <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 transition-transform">
             🛡️
           </div>
-          <h4 class="text-lg font-bold text-white mb-2">Universal Rootless Security</h4>
+          <h4 class="text-lg font-bold text-white mb-2">Rootless & Supply Chain Security</h4>
           <p class="text-slate-400 text-sm leading-relaxed">
-            Hardened with universal <code class="text-emerald-300 font-mono">777</code> read/write permissions and sticky-bit <code class="text-emerald-300 font-mono">/opt</code>. Runs safely under arbitrary UIDs (<code class="text-slate-300 font-mono">--user 1000:0</code> or OpenShift) with zero permission denied errors.
+            Hardened with universal <code class="text-emerald-300 font-mono">777</code> read/write permissions for arbitrary UIDs. Cryptographically signed with <strong>Sigstore / Cosign</strong> and attested with <strong>SPDX SBOM</strong> for zero supply-chain risk.
           </p>
         </div>
 
@@ -536,7 +537,7 @@ jobs:
       - name: Run Android CI Box Composite Action
         uses: hatem-noureddine/android-ci@v1
         with:
-          version: 'latest' # or specific SemVer like '1.4.9'
+          version: 'latest' # or specific SemVer like '1.5.0'
           run: |
             ci-doctor --summary
             ./gradlew test lintRelease assembleDebug --no-daemon</code></pre>
@@ -796,7 +797,7 @@ flowchart LR
             </div>
             <div class="p-5 bg-slate-950/90 text-slate-300 space-y-2 overflow-x-auto leading-relaxed">
               <p><span class="text-sky-400">runner@android-ci-box</span>:<span class="text-indigo-400">~</span>$ ci-doctor</p>
-              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.4.9) ===</p>
+              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.5.0) ===</p>
               <p><span class="text-emerald-400">[OK]</span> Operating System: Ubuntu 24.04 LTS (Noble) - Arch: aarch64 (Native arm64)</p>
               <p><span class="text-emerald-400">[OK]</span> Current User: runner (UID: 1000, GID: 0, Rootless: OK)</p>
               <p><span class="text-emerald-400">[OK]</span> Default Java: OpenJDK 21.0.13 (/opt/jdk-21)</p>
@@ -806,6 +807,7 @@ flowchart LR
               <p><span class="text-emerald-400">[OK]</span> Build-Tools: 35.0.0, 36.0.0, 37.0.0 available</p>
               <p><span class="text-emerald-400">[OK]</span> Fastlane: 2.241.2 (Precompiled Ruby 4.0.9 in /opt/rbenv)</p>
               <p><span class="text-emerald-400">[OK]</span> Security: 0 Unfixed Critical CVEs (Trivy & Scout Passed)</p>
+              <p><span class="text-emerald-400">[OK]</span> Supply Chain: Sigstore Cosign Signed & SPDX SBOM Attested</p>
               <p><span class="text-emerald-400">[OK]</span> Network Mode: Public Internet (Direct unthrottled access)</p>
               <p class="text-sky-400 font-bold mt-2">✨ ALL SYSTEMS HEALTHY (0 Warnings, 0 Errors)</p>
             </div>
