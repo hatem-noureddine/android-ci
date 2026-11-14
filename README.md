@@ -1,6 +1,7 @@
 # Android CI/CD Build Box (`hateum/android-ci-box`)
 
 [![Docker Hub](https://img.shields.io/docker/pulls/hateum/android-ci-box?style=flat-square&logo=docker&color=0088ff)](https://hub.docker.com/r/hateum/android-ci-box)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue?style=flat-square&logo=github)](https://hatem-noureddine.github.io/android-ci/)
 [![Multi-Arch](https://img.shields.io/badge/architecture-amd64%20%7C%20arm64-blue?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Security](https://img.shields.io/badge/Trivy%20Audit-0%20Critical%20CVEs-brightgreen?style=flat-square&logo=security)](https://github.com/hatem-noureddine/android-ci/security)
 [![Gradle](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
@@ -36,57 +37,60 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 ## 🏛️ Architecture & 6-Tier Dependency Schema
 
+```mermaid
+graph TD
+    classDef os fill:#2b3a4a,stroke:#4a6984,stroke-width:2px,color:#fff;
+    classDef runtime fill:#1e4d6b,stroke:#2980b9,stroke-width:2px,color:#fff;
+    classDef sdk fill:#145a32,stroke:#27ae60,stroke-width:2px,color:#fff;
+    classDef security fill:#641e16,stroke:#c0392b,stroke-width:2px,color:#fff;
+    classDef entrypoint fill:#512e5f,stroke:#8e44ad,stroke-width:2px,color:#fff;
+    classDef agent fill:#7d6608,stroke:#f1c40f,stroke-width:2px,color:#fff;
+
+    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 24.04 LTS (Noble Numbat)<br/>Native Multi-Arch (amd64 / arm64)"]:::os
+
+    T1 --> T2_Java["<b>Tier 2: Java Runtimes</b><br/>OpenJDK 21 (Default) & OpenJDK 17<br/>switch-jdk dynamic selector"]:::runtime
+    T1 --> T2_Ruby["<b>Tier 2: Ruby & Deploy Tooling</b><br/>Precompiled Ruby 4.0.9 (rbenv)<br/>Bundler 4.0.23 + Fastlane 2.241.2"]:::runtime
+    T1 --> T2_Sys["<b>Tier 2: System Utilities</b><br/>Python 3.12 (PEP 668), GitHub CLI (gh)<br/>curl, git-lfs, zip, unzip, POSIX ACLs"]:::runtime
+
+    T2_Java --> T3["<b>Tier 3: Android Engine & Tooling</b><br/>• Gradle 9.8.2 standalone + Wrapper auto-run<br/>• Platforms: android-35, 36, 37.0 (alias 37)<br/>• Build-Tools: 35.0.0, 36.0.0, 37.0.0<br/>• Google Android CLI (cmdline-tools/latest)<br/>• Dynamic NDK (install-ndk-version)<br/>• Standalone Bundletool 1.18.3"]:::sdk
+    T2_Ruby --> T3
+    T2_Sys --> T3
+
+    T3 --> T4["<b>Tier 4: Zero-Config Auto-Detection</b><br/>• detect-android-project (&lt;50ms regex scanner)<br/>• Multi-module aggregation (highest compileSdk)<br/>• Dynamic JDK 17/21 switch & SDK auto-install"]:::entrypoint
+
+    T4 --> T5["<b>Tier 5: Dual-Mode Network & Rootless Security</b><br/>• Universal 777 & sticky-bit /opt (UID 1000:0, OpenShift)<br/>• Public Internet fallback + Corporate Proxy/CA/Nexus<br/>• 0 Unfixed Critical CVEs (Trivy SARIF Gate)"]:::security
+
+    T5 --> T6["<b>Tier 6: AI Agent Playbook & Helpers</b><br/>• .agents/skills/android-ci-box/SKILL.md<br/>• Diagnostic CLI suite: ci-doctor, detect-android-project<br/>• Gradle Managed Devices (GMD) Headless SwiftShader"]:::agent
 ```
-+-----------------------------------------------------------------------------------------+
-|                        Tier 1: Base Operating System (Ubuntu 24.04 LTS)                 |
-|             Native Multi-Arch Matrix: linux/amd64 (x86_64) | linux/arm64 (aarch64)      |
-+-----------------------------------------------------------------------------------------+
-       |                                   |                                   |
-       v                                   v                                   v
-+------------------------+      +------------------------+      +------------------------+
-|  Tier 2: Java Runtimes |      |  Tier 2: Ruby Runtime  |      | Tier 2: System Tools   |
-| - OpenJDK 21 (Default) |      | - Ruby 4.0.9 (rbenv)   |      | - Python 3 & Pip (PEP) |
-| - OpenJDK 17 (Instant) |      | - Bundler 4.0.23       |      | - GitHub CLI (gh)      |
-| - switch-jdk helper    |      | - Fastlane 2.241.2     |      | - curl, git-lfs, zip   |
-+------------------------+      +------------------------+      +------------------------+
-       |                                   |                                   |
-       +-----------------------------------+-----------------------------------+
-                                           |
-                                           v
-+-----------------------------------------------------------------------------------------+
-|                    Tier 3: Android Build Engine & Standalone CLI Tooling                |
-| - Gradle 9.8.2 Standalone + Dynamic Gradle Wrapper Auto-Execution                       |
-| - Android Gradle Plugin (AGP) 8.x & 9.x Fully Supported                                 |
-| - Android SDK Platforms: android-35, android-36, android-37 (Pre-installed)             |
-| - Android Build-Tools: 35.0.0, 36.0.0, 37.0.0 (Pre-installed)                           |
-| - Google Android CLI ('android') & standalone Bundletool 1.18.3                         |
-+-----------------------------------------------------------------------------------------+
-                                           |
-                                           v
-+-----------------------------------------------------------------------------------------+
-|                 Tier 4: Zero-Config Dynamic Project Auto-Detection Engine               |
-| - detect-android-project: Scans build.gradle(.kts) & libs.versions.toml (<50ms)         |
-| - Multi-module maximum aggregation: automatically resolves highest compileSdk           |
-| - Auto-switches Java 17/21 and installs missing SDKs/build-tools on container startup   |
-| - Cross-compatibility: Automatically forces Java 17 if Gradle Wrapper < 8.5 is detected|
-+-----------------------------------------------------------------------------------------+
-                                           |
-                                           v
-+-----------------------------------------------------------------------------------------+
-|                      Tier 5: Automated Testing & Deployment Tooling                     |
-| - Fastlane 2.241.2: Native Google Play Console deployment & lane automation             |
-| - Gradle Managed Devices (GMD): SwiftShader Headless GPU & KVM Hardware Acceleration    |
-| - Unit Testing, Android Lint & ProGuard/R8 bytecode optimization                        |
-+-----------------------------------------------------------------------------------------+
-                                           |
-                                           v
-+-----------------------------------------------------------------------------------------+
-|                 Tier 6: Dual-Mode Universal Network & Rootless Security                 |
-| - Mode 1: Public Internet (Direct unthrottled access to Google & Maven Central)         |
-| - Mode 2: Enterprise Intranet (Auto-Proxy, Custom CA Import, Nexus/Artifactory Mirrors) |
-| - Rootless Hardened: Universal 777 permissions (Runs under UID 1000:0, OpenShift, K8s)  |
-| - Trivy Certified: 0 Unfixed Critical CVEs                                             |
-+-----------------------------------------------------------------------------------------+
+
+### 🌐 Dual-Mode Network Engine Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as CI Runner / Agent
+    participant Entry as entrypoint.sh
+    participant Certs as /certificates (CA)
+    participant Java as Java Truststore (cacerts)
+    participant Gradle as ~/.gradle/init.d & gradle.properties
+    participant App as Android Build Process
+
+    Host->>Entry: docker run hateum/android-ci-box
+    Note over Entry: Phase 1: Security & POSIX Check
+    alt Corporate CA present
+        Entry->>Certs: Scan *.crt, *.pem
+        Entry->>Java: keytool -importcert into cacerts
+    end
+    alt Enterprise Proxy defined
+        Entry->>Gradle: Inject systemProp.http(s).proxyHost/Port
+    end
+    alt Enterprise Mirror defined (NEXUS_URL)
+        Entry->>Gradle: Inject enterprise_mirrors.init.gradle
+    end
+    Note over Entry: Phase 2: Dynamic Project Auto-Detection
+    Entry->>App: detect-android-project (/project)
+    Entry->>App: Auto-align compileSdk & switch-jdk (17 or 21)
+    Entry->>App: exec "$@" (e.g. ./gradlew test, assembleRelease)
 ```
 
 ---
@@ -282,7 +286,34 @@ build_aab:
     paths:
       - app/build/outputs/bundle/release/*.aab
 ```
-*For Jenkins, Bitbucket Pipelines, and CircleCI, see [`examples/ci/`](examples/ci/).*
+
+### 3. Exhaustive CI/CD Recipes (Jenkins, Bitbucket, CircleCI, Azure DevOps)
+
+Complete copy-pasteable configuration files are documented in our [CI/CD Integration Hub](docs/ci-integrations.md):
+- [Jenkins Declarative Pipeline (`Jenkinsfile`)](docs/ci-integrations.md#3-jenkins-declarative-pipeline)
+- [Bitbucket Pipelines (`bitbucket-pipelines.yml`)](docs/ci-integrations.md#4-bitbucket-pipelines)
+- [CircleCI Docker Executor (`.circleci/config.yml`)](docs/ci-integrations.md#5-circleci)
+- [Azure DevOps Pipelines (`azure-pipelines.yml`)](docs/ci-integrations.md#6-azure-devops-pipelines)
+
+---
+
+## 🤖 AI Agents & Autonomous Workflows
+
+`hateum/android-ci-box` provides first-class support for **autonomous AI coding agents** (Antigravity, Claude Code, GitHub Copilot Workspace, Roo Code, Cursor):
+
+```mermaid
+flowchart LR
+    A["<b>1. Inspect & Diagnose</b><br/><code>ci-doctor --json</code><br/><code>detect-android-project</code>"] --> B["<b>2. Autonomous Align</b><br/><code>switch-jdk [17|21]</code><br/><code>install-sdk-version &lt;api&gt;</code>"]
+    B --> C["<b>3. Build & Test</b><br/><code>./gradlew test lintRelease</code>"]
+    C --> D{Build Succeeded?}
+    D -->|Yes| E["<b>4. Package & Publish</b><br/><code>bundletool</code> / Fastlane"]
+    D -->|No / Error Dump| F["<b>5. Analyze & Fix</b><br/>Parse error, fix source code<br/>or adjust AGP / dependencies"]
+    F --> C
+```
+
+- **Official Agent Skill**: Reference or include [`.agents/skills/android-ci-box/SKILL.md`](.agents/skills/android-ci-box/SKILL.md) in your agent configuration.
+- **Embedded Helpers**: Agents invoke ultra-fast utilities (`ci-doctor`, `detect-android-project`, `switch-jdk`, `install-sdk-version`, `install-ndk-version`, `bundletool`) with zero manual prompt friction.
+- **Full Guide**: See [AI Agent Autonomous Playbook](docs/ai-agents.md) for detailed protocols.
 
 ---
 
