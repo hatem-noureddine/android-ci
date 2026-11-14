@@ -94,8 +94,8 @@ RUN apt-get update -qq && \
     rm -rf /tmp/git-lfs /tmp/git-lfs.tar.gz && \
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
-    python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    rm -rf /usr/lib/python3/dist-packages/setuptools* /usr/lib/python3/dist-packages/wheel* && \
+    python3 -m pip install --no-cache-dir --ignore-installed pip setuptools wheel && \
+    rm -rf /usr/lib/python3/dist-packages/pip* /usr/lib/python3/dist-packages/setuptools* /usr/lib/python3/dist-packages/wheel* && \
     locale-gen "${LANG}" && \
     update-locale LANG="${LANG}" LC_ALL="${LC_ALL}" && \
     touch /etc/subuid /etc/subgid && \
