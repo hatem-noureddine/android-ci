@@ -1,7 +1,7 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.5.0
+version: 1.6.0
 triggers:
   - "build android"
   - "run android tests"
@@ -27,7 +27,9 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 
 ## 1. Container Specifications & Runtime Context
 
-- **Docker Image**: `hateum/android-ci-box:latest` (or SemVer tag `1.5.0`)
+- **Docker Images**:
+  - `hateum/android-ci-box:latest` (or SemVer tag `1.6.0`): Full batteries-included image with Android Emulator & GMD.
+  - `hateum/android-ci-box:slim` (or SemVer tag `1.6.0-slim`): Ultra-fast compilation and linting image (~35% smaller).
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available

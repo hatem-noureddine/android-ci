@@ -111,7 +111,7 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-sky-400 transition-colors">Android CI Box</span>
-          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.5.0</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.6.0</span>
         </div>
       </a>
 
@@ -197,6 +197,7 @@
               <span id="hero-docker-pulls" class="font-mono font-bold">4,550+ Docker Pulls</span>
             </span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Native amd64 & arm64</span>
+            <span class="px-2.5 py-1 rounded-md bg-sky-950/60 border border-sky-800 text-sky-300 font-mono font-medium">✓ :latest & :slim Variants</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ 0 Unfixed Critical CVEs</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Sigstore Cosign & SPDX SBOM</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Universal Rootless 777</span>
@@ -537,7 +538,7 @@ jobs:
       - name: Run Android CI Box Composite Action
         uses: hatem-noureddine/android-ci@v1
         with:
-          version: 'latest' # or specific SemVer like '1.5.0'
+          version: 'latest' # or specific SemVer like '1.6.0' or '1.6.0-slim'
           run: |
             ci-doctor --summary
             ./gradlew test lintRelease assembleDebug --no-daemon</code></pre>
@@ -797,7 +798,7 @@ flowchart LR
             </div>
             <div class="p-5 bg-slate-950/90 text-slate-300 space-y-2 overflow-x-auto leading-relaxed">
               <p><span class="text-sky-400">runner@android-ci-box</span>:<span class="text-indigo-400">~</span>$ ci-doctor</p>
-              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.5.0) ===</p>
+              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.6.0) ===</p>
               <p><span class="text-emerald-400">[OK]</span> Operating System: Ubuntu 24.04 LTS (Noble) - Arch: aarch64 (Native arm64)</p>
               <p><span class="text-emerald-400">[OK]</span> Current User: runner (UID: 1000, GID: 0, Rootless: OK)</p>
               <p><span class="text-emerald-400">[OK]</span> Default Java: OpenJDK 21.0.13 (/opt/jdk-21)</p>

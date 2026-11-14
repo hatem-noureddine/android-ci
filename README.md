@@ -37,6 +37,26 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 ---
 
+## 📦 Image Variants (`latest` vs `slim`)
+
+`hateum/android-ci-box` is available in two multi-architecture flavors ([ADR-0016](docs/adr/0016-multi-stage-image-variants-slim-vs-full.md)):
+
+| Feature / Capability | `latest` (Full Batteries-Included) | `slim` (Ultra-Fast CI) |
+| :--- | :--- | :--- |
+| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.6.0`) | `hateum/android-ci-box:slim` (or `1.6.0-slim`) |
+| **Compressed Size** | ~3.5 GB | **~2.2 GB (~35% faster download)** |
+| **Android SDK APIs (35, 36, 37)** | ✅ Yes | ✅ Yes |
+| **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
+| **Dual OpenJDK (17 & 21)** | ✅ Yes (`switch-jdk`) | ✅ Yes (`switch-jdk`) |
+| **Ruby 4.0.9 + Fastlane 2.241.2**| ✅ Yes | ✅ Yes |
+| **Bundletool 1.18.3 & Android CLI**| ✅ Yes | ✅ Yes |
+| **Dual-Mode Enterprise Network**| ✅ Yes | ✅ Yes |
+| **Sigstore Cosign & SPDX SBOM** | ✅ Yes | ✅ Yes |
+| **Android Emulator (GMD & UI Tests)**| ✅ Yes (Preinstalled on amd64) | ❌ No (Stripped for speed) |
+| **Recommended For** | End-to-End Instrumented Tests & GMD | Linting, Unit Tests, Assemble, Fastlane Deploy |
+
+---
+
 ## 🏛️ Architecture & 6-Tier Dependency Schema
 
 ```mermaid

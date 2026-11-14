@@ -170,7 +170,7 @@ if [ "$MODE" = "json" ]; then
     cat <<EOF
 {
   "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.5.0",
+  "version": "1.6.0",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
@@ -347,7 +347,7 @@ else
     if [ "$DPKG_ARCH" = "arm64" ] || [ "$DPKG_ARCH" = "aarch64" ]; then
         echo -e "  Android Emulator: ${CYAN}x86_64 only (Google does not publish Linux ARM64 emulator; compilation & unit tests run at native ARM64 speed)${RESET}"
     else
-        echo -e "  Android Emulator: ${YELLOW}Not in PATH or not installed${RESET}"
+        echo -e "  Android Emulator: ${YELLOW}Not installed (Slim variant or without emulator)${RESET}"
     fi
 fi
 echo -e "  AVD Directory   : ${ANDROID_AVD_HOME:-/home/runner/.android/avd}"
