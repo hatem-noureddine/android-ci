@@ -126,9 +126,11 @@
 
       <!-- External Links -->
       <div class="flex items-center gap-3">
-        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
           <svg class="w-4 h-4 text-sky-400" fill="currentColor" viewBox="0 0 24 24"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.186.185.186zm0 2.715h2.118a.186.186 0 00.186-.186V6.29a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.186v1.888c0 .102.082.186.185.186zm-2.954 0h2.118a.186.186 0 00.186-.186V6.29a.186.186 0 00-.186-.186H8.075a.185.185 0 00-.185.186v1.888c0 .102.082.186.185.186zm0 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186H8.075a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.954 0h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186H5.12a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m17.653 2.502c-.394-.258-1.576-.328-2.399-.186-.34-.959-1.077-1.464-2.148-1.464-.326 0-.649.049-.96.146-.35-.745-.986-1.127-1.89-1.127-.245 0-.495.029-.74.088V8.82a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v2.247c-.503-.092-1.018-.093-1.536 0V3.574a.186.186 0 00-.186-.185H2.167a.186.186 0 00-.186.185v7.504c-.394.062-.803.184-1.218.375-.521.24-.763.535-.763.929 0 2.508 1.936 4.673 4.887 5.467 1.139.307 2.378.463 3.684.463 4.908 0 9.213-2.128 10.963-5.467.575-1.096.538-1.921-.194-2.399"/></svg>
-          Docker Hub
+          <span>Docker Hub</span>
+          <span class="text-slate-600">·</span>
+          <span id="nav-docker-pulls" class="font-mono text-sky-400 font-bold">4.5k pulls</span>
         </a>
         <a href="https://github.com/hatem-noureddine/android-ci" target="_blank" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold shadow-lg shadow-sky-500/20 transition">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
@@ -190,6 +192,10 @@
 
           <!-- Feature Tag Pills -->
           <div class="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2.5 text-xs text-slate-400 font-medium">
+            <span class="px-2.5 py-1 rounded-md bg-sky-950/60 border border-sky-800 text-sky-300 flex items-center gap-1.5 shadow-sm">
+              <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+              <span id="hero-docker-pulls" class="font-mono font-bold">4,550+ Docker Pulls</span>
+            </span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Native amd64 & arm64</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ 0 Unfixed Critical CVEs</span>
             <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Universal Rootless 777</span>
@@ -826,7 +832,10 @@ flowchart LR
 
       <div class="flex items-center gap-6 text-sm">
         <a href="https://github.com/hatem-noureddine/android-ci" target="_blank" class="hover:text-white transition">GitHub</a>
-        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hover:text-white transition">Docker Hub</a>
+        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hover:text-white transition flex items-center gap-1.5">
+          <span>Docker Hub</span>
+          <span id="footer-docker-pulls" class="text-xs text-sky-400 font-mono font-medium">(4.5k)</span>
+        </a>
         <a href="https://github.com/hatem-noureddine/android-ci/releases" target="_blank" class="hover:text-white transition">Releases</a>
         <a href="https://github.com/hatem-noureddine/android-ci/blob/main/LICENSE" target="_blank" class="hover:text-white transition">MIT License</a>
       </div>
@@ -923,6 +932,46 @@ flowchart LR
         }
       });
     }
+
+    // Fetch live Docker Pulls count dynamically from official Docker Hub or Shields API
+    function fetchDockerPulls() {
+      fetch('https://img.shields.io/docker/pulls/hateum/android-ci-box.json')
+        .then(response => {
+          if (!response.ok) throw new Error('Shields API network response was not ok');
+          return response.json();
+        })
+        .then(data => {
+          const pulls = data.value || data.message || '4.5k';
+          const navElem = document.getElementById('nav-docker-pulls');
+          const heroElem = document.getElementById('hero-docker-pulls');
+          const footerElem = document.getElementById('footer-docker-pulls');
+          if (navElem) navElem.innerText = `${pulls} pulls`;
+          if (heroElem) heroElem.innerText = `${pulls}+ Docker Pulls`;
+          if (footerElem) footerElem.innerText = `(${pulls})`;
+        })
+        .catch(() => {
+          // Fallback to direct Docker Hub API if possible
+          fetch('https://hub.docker.com/v2/repositories/hateum/android-ci-box/')
+            .then(res => res.json())
+            .then(data => {
+              if (data.pull_count) {
+                const formatted = new Intl.NumberFormat('en-US').format(data.pull_count);
+                const navElem = document.getElementById('nav-docker-pulls');
+                const heroElem = document.getElementById('hero-docker-pulls');
+                const footerElem = document.getElementById('footer-docker-pulls');
+                if (navElem) navElem.innerText = `${formatted} pulls`;
+                if (heroElem) heroElem.innerText = `${formatted} Docker Pulls`;
+                if (footerElem) footerElem.innerText = `(${formatted})`;
+              }
+            })
+            .catch(() => {
+              // Gracefully keep default text
+            });
+        });
+    }
+
+    // Call on page load
+    document.addEventListener('DOMContentLoaded', fetchDockerPulls);
   </script>
 
 </body>
