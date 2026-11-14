@@ -1,0 +1,43 @@
+name: Sync Docker Hub Description & Overview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/dockerhub-overview.md'
+      - '.github/workflows/dockerhub-sync-description.yml'
+
+jobs:
+  sync-description:
+    name: Sync Overview to Docker Hub
+    runs-on: ubuntu-24.04
+    environment: Docker
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check Credentials
+        id: check_creds
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            echo "has_creds=true" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub credentials detected."
+          else
+            echo "has_creds=false" >> "$GITHUB_OUTPUT"
+            echo "No Docker Hub credentials found."
+          fi
+
+      - name: Update Docker Hub Description & Overview
+        if: steps.check_creds.outputs.has_creds == 'true'
+        uses: peter-evans/dockerhub-description@v4.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+          repository: hateum/android-ci-box
+          readme-filepath: ./docs/dockerhub-overview.md
+          short-description: "Fast, rootless Android CI/CD image with AGP 9.x, SDK 35/36/37, JDK 17/21, GMD & Auto-Detection."

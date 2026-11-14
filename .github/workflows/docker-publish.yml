@@ -325,7 +325,7 @@ jobs:
             "ghcr.io/${{ github.repository }}:${VERSION}-arm64"
 
       - name: Update Docker Hub Description & Overview
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.check_creds.outputs.has_creds == 'true'
         uses: peter-evans/dockerhub-description@v4.0.0
         continue-on-error: true
         with:
