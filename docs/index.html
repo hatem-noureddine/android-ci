@@ -1,170 +1,929 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth dark">
 <head>
   <meta charset="UTF-8">
-  <title>Android CI Box | hateum/android-ci-box</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <title>Android CI Box | The Ultimate High-Performance Android CI/CD Container</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Battle-tested, high-performance, rootless Android CI/CD Docker image with AGP 9.x, SDK 35/36/37, JDK 17/21, GMD, native multi-arch and AI Agent skills.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  
-  <!-- Docsify Themeable: Clean, Modern & Responsive Theme -->
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
-  
-  <style>
-    :root {
-      --base-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --code-font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, Monaco, monospace;
-      --theme-color: #1a73e8;
-      --sidebar-width: 280px;
-      --sidebar-nav-link-color: #3c4043;
-      --sidebar-nav-link-color--hover: #1a73e8;
-      --sidebar-nav-link-color--active: #1a73e8;
-      --sidebar-nav-link-font-weight--active: 600;
-      --heading-color: #202124;
-      --content-max-width: 900px;
-      --code-inline-background: #f1f3f4;
-      --code-inline-color: #d93025;
-      --code-block-background: #f8f9fa;
-      --table-cell-padding: 10px 14px;
-      --table-row-odd-background: #fafafa;
-    }
+  <meta property="og:title" content="Android CI Box | hateum/android-ci-box">
+  <meta property="og:description" content="Fast, rootless Android CI/CD image with AGP 9.x, SDK 35/36/37, JDK 17/21, GMD & Auto-Detection.">
+  <meta property="og:image" content="Gemini_Generated_Image_49450i49450i4945.jpeg">
+  <meta property="og:type" content="website">
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --base-background-color: #121212;
-        --base-color: #e8eaed;
-        --heading-color: #ffffff;
-        --sidebar-background: #18191a;
-        --sidebar-nav-link-color: #bdc1c6;
-        --sidebar-nav-link-color--hover: #8ab4f8;
-        --sidebar-nav-link-color--active: #8ab4f8;
-        --theme-color: #8ab4f8;
-        --code-inline-background: #282a2d;
-        --code-inline-color: #f28b82;
-        --code-block-background: #1e1f20;
-        --table-row-odd-background: #1a1a1c;
-      }
-    }
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-    .markdown-section table {
-      display: table;
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1.5rem 0;
-    }
-
-    .mermaid {
-      background-color: transparent !important;
-      display: flex;
-      justify-content: center;
-      margin: 25px 0;
-    }
-
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-      margin: 24px 0;
-    }
-
-    .card {
-      border: 1px solid #dadce0;
-      border-radius: 8px;
-      padding: 18px;
-      background: var(--code-block-background);
-      transition: transform 0.15s ease, border-color 0.15s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      border-color: var(--theme-color);
-    }
-
-    .card h3 {
-      margin-top: 0;
-      font-size: 1.1rem;
-      color: var(--heading-color);
-    }
-
-    .card p {
-      font-size: 0.95rem;
-      margin-bottom: 0;
-    }
-  </style>
-</head>
-<body>
-  <div id="app">Loading Android CI Box documentation...</div>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    window.$docsify = {
-      name: 'Android CI Box',
-      repo: 'https://github.com/hatem-noureddine/android-ci',
-      loadSidebar: true,
-      subMaxLevel: 2,
-      loadNavbar: true,
-      auto2top: true,
-      search: {
-        maxAge: 86400000,
-        paths: 'auto',
-        placeholder: 'Search documentation...',
-        noData: 'No results found',
-        depth: 3
-      },
-      copyCode: {
-        buttonText: 'Copy',
-        errorText: 'Error',
-        successText: 'Copied'
-      },
-      pagination: {
-        previousText: 'Previous',
-        nextText: 'Next',
-        crossChapter: true
-      },
-      markdown: {
-        renderer: {
-          code: function(code, lang) {
-            if (lang === "mermaid") {
-              return '<div class="mermaid">' + code + '</div>';
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef9ff',
+              100: '#d8f1ff',
+              400: '#38bdf8',
+              500: '#0284c7',
+              600: '#0369a1',
+            },
+            dark: {
+              base: '#090d16',
+              card: '#0f172a',
+              border: '#1e293b',
+              hover: '#1e293b',
             }
-            return this.origin.code.apply(this, arguments);
           }
         }
       }
-    };
+    }
   </script>
-  <!-- Docsify Core -->
-  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-  <!-- Docsify Themeable -->
-  <script src="//cdn.jsdelivr.net/npm/docsify-themeable@0/dist/js/docsify-themeable.min.js"></script>
-  <!-- Search Plugin -->
-  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-  <!-- Copy to Clipboard Plugin -->
-  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
-  <!-- Pagination Plugin -->
-  <script src="//cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
-  <!-- Zoom Image Plugin -->
-  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
-  <!-- Prism Syntax Highlighting -->
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-groovy.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-docker.min.js"></script>
-  <!-- Mermaid.js Core -->
+
+  <!-- PrismJS for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
+
+  <!-- Mermaid.js -->
   <script type="module">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#64748b',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b'
+      }
+    });
     window.mermaid = mermaid;
   </script>
-  <script>
-    window.addEventListener('hashchange', function() {
-      setTimeout(function() {
-        if (window.mermaid) {
-          window.mermaid.run({
-            querySelector: '.mermaid'
-          });
+
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    .tech-glow {
+      box-shadow: 0 0 50px -10px rgba(56, 189, 248, 0.15);
+    }
+    .video-glow {
+      box-shadow: 0 0 35px rgba(2, 132, 199, 0.25);
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .mermaid {
+      background: transparent !important;
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body class="selection:bg-sky-500 selection:text-white">
+
+  <!-- ============================================================================ -->
+  <!-- Top Navigation Bar                                                           -->
+  <!-- ============================================================================ -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/25 group-hover:scale-105 transition-transform">
+          🤖
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-sky-400 transition-colors">Android CI Box</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.4.8</span>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+        <a href="#features" class="hover:text-sky-400 transition-colors">Features</a>
+        <a href="#architecture" class="hover:text-sky-400 transition-colors">Architecture</a>
+        <a href="#ci-recipes" class="hover:text-sky-400 transition-colors">CI Pipelines</a>
+        <a href="#ai-agents" class="hover:text-sky-400 transition-colors">AI Agents</a>
+        <a href="#diagnostics" class="hover:text-sky-400 transition-colors">Diagnostics</a>
+      </nav>
+
+      <!-- External Links -->
+      <div class="flex items-center gap-3">
+        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <svg class="w-4 h-4 text-sky-400" fill="currentColor" viewBox="0 0 24 24"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.186.185.186zm0 2.715h2.118a.186.186 0 00.186-.186V6.29a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.186v1.888c0 .102.082.186.185.186zm-2.954 0h2.118a.186.186 0 00.186-.186V6.29a.186.186 0 00-.186-.186H8.075a.185.185 0 00-.185.186v1.888c0 .102.082.186.185.186zm0 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186H8.075a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.954 0h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186H5.12a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m17.653 2.502c-.394-.258-1.576-.328-2.399-.186-.34-.959-1.077-1.464-2.148-1.464-.326 0-.649.049-.96.146-.35-.745-.986-1.127-1.89-1.127-.245 0-.495.029-.74.088V8.82a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v2.247c-.503-.092-1.018-.093-1.536 0V3.574a.186.186 0 00-.186-.185H2.167a.186.186 0 00-.186.185v7.504c-.394.062-.803.184-1.218.375-.521.24-.763.535-.763.929 0 2.508 1.936 4.673 4.887 5.467 1.139.307 2.378.463 3.684.463 4.908 0 9.213-2.128 10.963-5.467.575-1.096.538-1.921-.194-2.399"/></svg>
+          Docker Hub
+        </a>
+        <a href="https://github.com/hatem-noureddine/android-ci" target="_blank" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold shadow-lg shadow-sky-500/20 transition">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          GitHub Repo
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================================ -->
+  <!-- Hero Section (Split Layout with Video Showcase)                             -->
+  <!-- ============================================================================ -->
+  <section class="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
+    <!-- Ambient Light Effects -->
+    <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[350px] bg-gradient-to-tr from-sky-600/20 to-indigo-600/15 blur-[120px] pointer-events-none rounded-full"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        <!-- Left Column: Copy, Badges & CTA -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-sky-950/80 border border-sky-800 text-sky-300">
+            <span class="flex h-2 w-2 rounded-full bg-sky-400 animate-ping"></span>
+            <span>Production-Ready · AGP 9.x · SDK 35/36/37 · JDK 17/21</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.1]">
+            The Ultimate Android CI/CD <span class="bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">Build Box</span>.
+          </h1>
+
+          <p class="text-base sm:text-lg text-slate-300 max-w-2xl font-normal leading-relaxed">
+            A battle-tested, high-performance, and rootless Docker container engineered for lightning-fast Android pipelines. Features native multi-arch execution, zero-config dynamic project detection, and native AI Agent support.
+          </p>
+
+          <!-- 1-Click Interactive Command Box -->
+          <div class="pt-2">
+            <div class="p-1 rounded-xl bg-gradient-to-r from-sky-500/25 to-indigo-500/25 border border-slate-700/80 glass inline-block w-full max-w-xl text-left">
+              <div class="flex items-center justify-between px-3 py-2 text-xs font-mono text-slate-300 gap-2">
+                <span class="text-sky-400 select-none">$</span>
+                <span id="cmd-hero" class="truncate font-mono">docker run --rm -v "$(pwd):/project" hateum/android-ci-box:latest ./gradlew check</span>
+                <button onclick="copyCommand('cmd-hero', this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition text-[11px] font-sans font-semibold flex items-center gap-1 shrink-0">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                  <span>Copy</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons & Badges -->
+          <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+            <a href="#ci-recipes" class="px-6 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm shadow-lg shadow-sky-500/25 transition-all transform hover:-translate-y-0.5">
+              Explore CI Pipelines →
+            </a>
+            <a href="#architecture" class="px-6 py-3 rounded-xl glass hover:bg-slate-800 text-slate-200 font-semibold text-sm transition-all transform hover:-translate-y-0.5">
+              6-Tier Architecture
+            </a>
+          </div>
+
+          <!-- Feature Tag Pills -->
+          <div class="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-2.5 text-xs text-slate-400 font-medium">
+            <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Native amd64 & arm64</span>
+            <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ 0 Unfixed Critical CVEs</span>
+            <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Universal Rootless 777</span>
+            <span class="px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700">✓ Fastlane 2.241.2</span>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Video Showcase Mockup -->
+        <div class="lg:col-span-5 flex justify-center">
+          <div class="relative w-full max-w-md lg:max-w-none">
+            
+            <!-- Tech glowing backplate -->
+            <div class="absolute -inset-1.5 bg-gradient-to-tr from-sky-500 via-indigo-500 to-purple-600 rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition duration-1000"></div>
+
+            <!-- Terminal Mockup Container -->
+            <div class="relative rounded-2xl glass border border-slate-700/80 overflow-hidden shadow-2xl video-glow">
+              
+              <!-- Mockup Title Bar -->
+              <div class="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+                  <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                  <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                </div>
+                <div class="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  android-ci-box:latest
+                </div>
+                <div class="text-xs text-slate-500 font-mono">1080p</div>
+              </div>
+
+              <!-- Video Player -->
+              <div class="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+                <video 
+                  id="hero-video"
+                  class="w-full h-full object-cover"
+                  autoplay 
+                  loop 
+                  muted 
+                  playsinline
+                  poster="Gemini_Generated_Image_49450i49450i4945.jpeg">
+                  <source src="gemini_generated_video_8f3c0246.mp4" type="video/mp4">
+                  Your browser does not support HTML5 video.
+                </video>
+
+                <!-- Video Controls Overlay -->
+                <div class="absolute bottom-3 right-3 flex items-center gap-2 z-20">
+                  <button onclick="toggleVideoSound()" id="sound-btn" class="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700 backdrop-blur text-xs transition" title="Toggle Sound">
+                    🔊
+                  </button>
+                  <button onclick="toggleVideoPlay()" id="play-btn" class="p-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700 backdrop-blur text-xs transition" title="Play/Pause">
+                    ⏸️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Info Footer under Video -->
+              <div class="p-4 bg-slate-900/70 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                <div>
+                  <span class="text-slate-400">Silicon Architecture:</span>
+                  <span class="text-sky-300 font-mono font-medium ml-1">Native Multi-Arch</span>
+                </div>
+                <div>
+                  <span class="text-slate-400">Security Gate:</span>
+                  <span class="text-emerald-400 font-semibold ml-1">Trivy & Scout Passed</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Feature Grid / Key Differentiators                                          -->
+  <!-- ============================================================================ -->
+  <section id="features" class="py-20 border-t border-slate-800/80 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-sky-400 mb-2 font-mono">Engineered For Zero Friction</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Why Top Teams Choose <span class="text-sky-400">hateum/android-ci-box</span>
+        </h3>
+        <p class="mt-4 text-slate-400 text-base">
+          Say goodbye to flaky pipeline scripts, slow QEMU arm64 emulation, and broken permissions.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- Card 1 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-5 group-hover:scale-110 transition-transform">
+            ⚡
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Native Multi-Arch Silicon</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Native compilation on both <code class="text-sky-300 font-mono">amd64</code> and <code class="text-sky-300 font-mono">arm64</code>. Build with 100% native silicon speed on Apple Silicon runners, AWS Graviton, and standard Linux servers without slow QEMU translation.
+          </p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-5 group-hover:scale-110 transition-transform">
+            🎯
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Zero-Config Dynamic Detection</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Ultra-fast static scanner (<code class="text-cyan-300 font-mono">&lt;50ms</code>) parses <code class="text-slate-300 font-mono">build.gradle(.kts)</code> and version catalogs to automatically align target SDKs and Java toolchains without manual pipeline parameters.
+          </p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-5 group-hover:scale-110 transition-transform">
+            ☕
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Dual-JDK (Java 21 + 17)</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Comes with OpenJDK 21 (default) and OpenJDK 17 preinstalled. Instant dynamic toggle via <code class="text-amber-300 font-mono">switch-jdk [17|21]</code> in &lt;20ms without restarting the container.
+          </p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 transition-transform">
+            🛡️
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Universal Rootless Security</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Hardened with universal <code class="text-emerald-300 font-mono">777</code> read/write permissions and sticky-bit <code class="text-emerald-300 font-mono">/opt</code>. Runs safely under arbitrary UIDs (<code class="text-slate-300 font-mono">--user 1000:0</code> or OpenShift) with zero permission denied errors.
+          </p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-5 group-hover:scale-110 transition-transform">
+            🌐
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Dual-Mode Enterprise Network</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Works out-of-the-box on the public web. When behind corporate firewalls, automatically imports custom CA certificates into Java truststores and configures HTTP/S proxies & Nexus mirrors.
+          </p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="p-6 rounded-2xl glass hover:border-sky-500/50 transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-5 group-hover:scale-110 transition-transform">
+            🚀
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Fastlane & Mobile Tooling</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Precompiled Ruby 4.0.9 + Fastlane 2.241.2 ready out-of-the-box in <code class="text-rose-300 font-mono">/opt/rbenv</code>. Includes Bundletool 1.18.3, Android CLI, and Gradle Managed Devices with SwiftShader headless GPU.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Interactive Architecture & Lifecycle Schemas                                 -->
+  <!-- ============================================================================ -->
+  <section id="architecture" class="py-20 border-t border-slate-800/80 bg-slate-950/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-sky-400 mb-2 font-mono">Architecture & Internals</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Built on a Solid 6-Tier Architecture
+        </h3>
+        <p class="mt-4 text-slate-400 text-base">
+          Explore the internal layer topology, automated proxy and mirror resolution, and multi-architecture execution paths.
+        </p>
+
+        <!-- Diagram Navigation Tabs -->
+        <div class="flex items-center justify-center gap-2 p-1.5 rounded-xl glass border border-slate-800 max-w-md mx-auto mt-8">
+          <button onclick="switchArchTab('tier')" id="tab-tier-btn" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-sky-500 text-slate-950 font-bold transition">
+            6-Tier Schema
+          </button>
+          <button onclick="switchArchTab('network')" id="tab-network-btn" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+            Network Engine
+          </button>
+          <button onclick="switchArchTab('multiarch')" id="tab-multiarch-btn" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+            Multi-Arch Flow
+          </button>
+        </div>
+      </div>
+
+      <!-- Diagram Viewports -->
+      <div class="rounded-2xl glass border border-slate-800 p-6 sm:p-8 tech-glow overflow-x-auto">
+        
+        <!-- Tab 1: 6-Tier Schema -->
+        <div id="tab-tier-content" class="block">
+          <div class="mermaid">
+graph TD
+    classDef os fill:#1e293b,stroke:#475569,stroke-width:2px,color:#fff;
+    classDef runtime fill:#0f172a,stroke:#0284c7,stroke-width:2px,color:#fff;
+    classDef sdk fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#fff;
+    classDef sec fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fff;
+    classDef net fill:#3b0764,stroke:#a855f7,stroke-width:2px,color:#fff;
+    classDef agent fill:#713f12,stroke:#eab308,stroke-width:2px,color:#fff;
+
+    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 24.04 LTS (Noble) · Multi-Arch amd64/arm64"]:::os
+    T1 --> T2_Java["<b>Tier 2: Java Runtimes</b><br/>OpenJDK 21 & 17 · switch-jdk"]:::runtime
+    T1 --> T2_Ruby["<b>Tier 2: Ruby & Fastlane</b><br/>Ruby 4.0.9 (rbenv) · Fastlane 2.241.2"]:::runtime
+    T1 --> T2_Sys["<b>Tier 2: System Utilities</b><br/>Python 3.12 · GitHub CLI · curl · git-lfs"]:::runtime
+
+    T2_Java --> T3["<b>Tier 3: Android Build Engine</b><br/>Gradle 9.8.2 · Android SDK 35/36/37 · Google Android CLI · Bundletool"]:::sdk
+    T2_Ruby --> T3
+    T2_Sys --> T3
+
+    T3 --> T4["<b>Tier 4: Zero-Config Auto-Detection</b><br/>detect-android-project &lt;50ms · Auto SDK & JDK align"]:::net
+    T4 --> T5["<b>Tier 5: Dual-Mode Network & Security</b><br/>Universal 777 · Auto-CA Import · Proxy & Nexus derivation · 0 Critical CVEs"]:::sec
+    T5 --> T6["<b>Tier 6: AI Agent Playbook & Helpers</b><br/>.agents/skills · ci-doctor · GMD Headless SwiftShader"]:::agent
+          </div>
+        </div>
+
+        <!-- Tab 2: Dual-Mode Network -->
+        <div id="tab-network-content" class="hidden">
+          <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Host as CI Runner / Agent
+    participant Entry as entrypoint.sh
+    participant Certs as /certificates (CA)
+    participant Java as Java Truststore (cacerts)
+    participant Gradle as ~/.gradle/init.d & gradle.properties
+    participant App as Android Build Process
+
+    Host->>Entry: docker run hateum/android-ci-box
+    Note over Entry: Phase 1: Security & POSIX Check
+    alt Corporate CA present
+        Entry->>Certs: Scan *.crt, *.pem
+        Entry->>Java: keytool -importcert into cacerts
+    end
+    alt Enterprise Proxy defined
+        Entry->>Gradle: Inject systemProp.http(s).proxyHost/Port
+    end
+    alt Enterprise Mirror defined (NEXUS_URL)
+        Entry->>Gradle: Inject enterprise_mirrors.init.gradle
+    end
+    Note over Entry: Phase 2: Dynamic Project Auto-Detection
+    Entry->>App: detect-android-project (/project)
+    Entry->>App: Auto-align compileSdk & switch-jdk (17 or 21)
+    Entry->>App: exec "$@" (e.g. ./gradlew test, assembleRelease)
+          </div>
+        </div>
+
+        <!-- Tab 3: Multi-Arch Flow -->
+        <div id="tab-multiarch-content" class="hidden">
+          <div class="mermaid">
+flowchart TD
+    Start([Host launches container]) --> ArchCheck{Detect CPU Architecture}
+    
+    ArchCheck -->|x86_64 / amd64| AMD["Run native amd64 binaries<br/>• Android SDK Emulator available<br/>• Full KVM / GMD hardware emulation"]
+    ArchCheck -->|aarch64 / arm64| ARM["Run native arm64 binaries<br/>• Apple Silicon & AWS Graviton native speed<br/>• Emulator package omitted (Google constraint)"]
+
+    AMD --> ScanProj[Scan Android project in /project]
+    ARM --> ScanProj
+
+    ScanProj --> DetectVersion{detect-android-project &lt;50ms}
+    DetectVersion -->|compileSdk &lt;= 34| LegacySDK["install-sdk-version &lt;api&gt; dynamically"]
+    DetectVersion -->|compileSdk 35/36/37| PreinstalledSDK["Use pre-installed Android SDK 35/36/37"]
+    
+    DetectVersion -->|Toolchain Java 17| Switch17["switch-jdk 17"]
+    DetectVersion -->|Toolchain Java 21| Switch21["Use default OpenJDK 21"]
+
+    LegacySDK --> ExecuteBuild[Execute Gradle build / Fastlane lane]
+    PreinstalledSDK --> ExecuteBuild
+    Switch17 --> ExecuteBuild
+    Switch21 --> ExecuteBuild
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Production CI/CD Pipeline Recipes (Interactive Tabs)                         -->
+  <!-- ============================================================================ -->
+  <section id="ci-recipes" class="py-20 border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-sky-400 mb-2 font-mono">Copy-Paste & Ship</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Ready-to-Use CI/CD Configurations
+        </h3>
+        <p class="mt-4 text-slate-400 text-base">
+          Drop-in pipeline files for your favorite CI platform with built-in caching and best practices.
+        </p>
+
+        <!-- Platform Tabs -->
+        <div class="flex flex-wrap items-center justify-center gap-2 p-1.5 rounded-xl glass border border-slate-800 max-w-2xl mx-auto mt-8">
+          <button onclick="switchCiTab('gha-action')" id="tab-gha-action-btn" class="py-2 px-3 rounded-lg text-xs font-semibold bg-sky-500 text-slate-950 font-bold transition">GitHub Action</button>
+          <button onclick="switchCiTab('gha-job')" id="tab-gha-job-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">GHA Container</button>
+          <button onclick="switchCiTab('gitlab')" id="tab-gitlab-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">GitLab CI</button>
+          <button onclick="switchCiTab('jenkins')" id="tab-jenkins-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Jenkins</button>
+          <button onclick="switchCiTab('bitbucket')" id="tab-bitbucket-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Bitbucket</button>
+          <button onclick="switchCiTab('circleci')" id="tab-circleci-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">CircleCI</button>
+          <button onclick="switchCiTab('azure')" id="tab-azure-btn" class="py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Azure DevOps</button>
+        </div>
+      </div>
+
+      <!-- Code Box Container -->
+      <div class="max-w-4xl mx-auto rounded-2xl glass border border-slate-800 overflow-hidden shadow-2xl">
+        <div class="px-5 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+          <span id="ci-filename" class="text-xs font-mono text-sky-400">.github/workflows/android.yml</span>
+          <button onclick="copyActiveCiCode(this)" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 transition text-xs font-semibold flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span>Copy Code</span>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-x-auto text-sm font-mono">
+          
+          <!-- Recipe 1: GHA Composite Action -->
+          <pre id="code-gha-action" class="language-yaml"><code>name: Android CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build & Test Android App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Android CI Box Composite Action
+        uses: hatem-noureddine/android-ci@v1
+        with:
+          version: 'latest' # or specific SemVer like '1.4.8'
+          run: |
+            ci-doctor --summary
+            ./gradlew test lintRelease assembleDebug --no-daemon</code></pre>
+
+          <!-- Recipe 2: GHA Container Job -->
+          <pre id="code-gha-job" class="language-yaml hidden"><code>name: Android CI (Container Job)
+
+on: [push, pull_request]
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    container:
+      image: hateum/android-ci-box:latest
+      options: --user 1000:0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Diagnostics & Build
+        run: |
+          ci-doctor
+          ./gradlew test lintRelease assembleRelease --no-daemon
+
+      - name: Deploy via Fastlane
+        if: github.ref == 'refs/heads/main'
+        env:
+          GOOGLE_PLAY_KEY: ${{ secrets.GOOGLE_PLAY_KEY }}
+        run: bundle exec fastlane deploy_internal</code></pre>
+
+          <!-- Recipe 3: GitLab CI -->
+          <pre id="code-gitlab" class="language-yaml hidden"><code>image: hateum/android-ci-box:latest
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}-android"
+  paths:
+    - .gradle/wrapper/
+    - .gradle/caches/
+
+stages: [ test, build ]
+
+unit_tests:
+  stage: test
+  script:
+    - ci-doctor --summary
+    - ./gradlew test lintRelease --stacktrace
+
+assemble_release:
+  stage: build
+  script:
+    - ./gradlew assembleRelease
+  artifacts:
+    paths:
+      - app/build/outputs/apk/release/*.apk
+      - app/build/outputs/bundle/release/*.aab</code></pre>
+
+          <!-- Recipe 4: Jenkins -->
+          <pre id="code-jenkins" class="language-groovy hidden"><code>pipeline {
+    agent {
+        docker {
+            image 'hateum/android-ci-box:latest'
+            args  '--user 1000:0 -v /var/cache/gradle:/home/runner/.gradle'
         }
-      }, 200);
-    });
+    }
+    stages {
+        stage('Diagnostics & Lint') {
+            steps {
+                sh 'ci-doctor --summary'
+                sh './gradlew test lintRelease --no-daemon'
+            }
+        }
+        stage('Assemble Release') {
+            steps {
+                sh './gradlew assembleRelease --no-daemon'
+            }
+            post {
+                success {
+                    archiveArtifacts 'app/build/outputs/**/*.apk, app/build/outputs/**/*.aab'
+                }
+            }
+        }
+    }
+}</code></pre>
+
+          <!-- Recipe 5: Bitbucket -->
+          <pre id="code-bitbucket" class="language-yaml hidden"><code>image: hateum/android-ci-box:latest
+
+pipelines:
+  default:
+    - step:
+        name: Build & Test
+        caches:
+          - gradle
+        script:
+          - ci-doctor
+          - ./gradlew test lint assembleDebug --no-daemon
+        artifacts:
+          - app/build/outputs/apk/debug/*.apk</code></pre>
+
+          <!-- Recipe 6: CircleCI -->
+          <pre id="code-circleci" class="language-yaml hidden"><code>version: 2.1
+jobs:
+  build:
+    docker:
+      - image: hateum/android-ci-box:latest
+        user: runner
+    working_directory: /project
+    steps:
+      - checkout
+      - run: ci-doctor
+      - run: ./gradlew test lintRelease assembleRelease --no-daemon
+      - store_artifacts:
+          path: app/build/outputs/bundle/release</code></pre>
+
+          <!-- Recipe 7: Azure DevOps -->
+          <pre id="code-azure" class="language-yaml hidden"><code>pool:
+  vmImage: 'ubuntu-latest'
+
+container:
+  image: hateum/android-ci-box:latest
+  options: --user 1000:0
+
+steps:
+  - script: ci-doctor
+    displayName: 'Healthcheck'
+  - script: ./gradlew test lintRelease assembleRelease --no-daemon
+    displayName: 'Build Android App'</code></pre>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- AI Agents & Autonomous Execution Loop                                        -->
+  <!-- ============================================================================ -->
+  <section id="ai-agents" class="py-20 border-t border-slate-800/80 bg-slate-950/40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-xs font-bold uppercase tracking-widest text-sky-400 mb-2 font-mono">Agent-Ready Infrastructure</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          Built for Autonomous AI Coding Agents
+        </h3>
+        <p class="mt-4 text-slate-400 text-base">
+          Antigravity, Claude Code, GitHub Copilot Workspace, Roo Code and Cursor can inspect, build, lint, and fix Android projects in a closed-loop.
+        </p>
+      </div>
+
+      <!-- Closed-Loop Mermaid Diagram -->
+      <div class="rounded-2xl glass border border-slate-800 p-6 sm:p-8 mb-12 tech-glow">
+        <h4 class="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">Autonomous Closed-Loop Execution</h4>
+        <div class="mermaid">
+flowchart LR
+    A["<b>1. Inspect & Diagnose</b><br/><code>ci-doctor --json</code><br/><code>detect-android-project</code>"] --> B["<b>2. Autonomous Align</b><br/><code>switch-jdk [17|21]</code><br/><code>install-sdk-version &lt;api&gt;</code>"]
+    B --> C["<b>3. Build & Test</b><br/><code>./gradlew test lintRelease</code>"]
+    C --> D{Build Succeeded?}
+    D -->|Yes| E["<b>4. Package & Publish</b><br/><code>bundletool</code> / Fastlane"]
+    D -->|No / Error Dump| F["<b>5. Analyze & Fix</b><br/>Parse error, fix source code<br/>or adjust AGP / dependencies"]
+    F --> C
+        </div>
+      </div>
+
+      <!-- Embedded CLI Helpers Table -->
+      <div class="overflow-x-auto rounded-2xl glass border border-slate-800">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-900/80 text-xs font-mono text-slate-400 uppercase border-b border-slate-800">
+            <tr>
+              <th class="px-6 py-4">CLI Utility</th>
+              <th class="px-6 py-4">Location</th>
+              <th class="px-6 py-4">Agent Purpose</th>
+              <th class="px-6 py-4">Latency</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 text-slate-300 font-normal">
+            <tr class="hover:bg-slate-800/40">
+              <td class="px-6 py-4 font-mono font-bold text-sky-400">ci-doctor</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">/usr/local/bin/ci-doctor</td>
+              <td class="px-6 py-4">Complete probe (Java, SDK, KVM/GMD, Proxies, Mirrors). Emits human-readable or <code class="text-xs bg-slate-800 px-1.5 py-0.5 rounded text-sky-300">--json</code>.</td>
+              <td class="px-6 py-4 font-mono text-xs text-emerald-400">&lt;150ms</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="px-6 py-4 font-mono font-bold text-cyan-400">detect-android-project</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">/usr/local/bin/detect-android-project</td>
+              <td class="px-6 py-4">Scans build.gradle(.kts) & version catalogs to identify highest compileSdk & Java version.</td>
+              <td class="px-6 py-4 font-mono text-xs text-emerald-400">&lt;50ms</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="px-6 py-4 font-mono font-bold text-amber-400">switch-jdk</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">/usr/local/bin/switch-jdk [17|21]</td>
+              <td class="px-6 py-4">Instant dynamic JAVA_HOME and binary symlink toggle without restarting container.</td>
+              <td class="px-6 py-4 font-mono text-xs text-emerald-400">&lt;20ms</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="px-6 py-4 font-mono font-bold text-purple-400">install-sdk-version</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">/usr/local/bin/install-sdk-version &lt;api&gt;</td>
+              <td class="px-6 py-4">Installs older/preview SDK platforms using official Google Android CLI with sdkmanager fallback.</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">On-demand</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="px-6 py-4 font-mono font-bold text-rose-400">install-ndk-version</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">/usr/local/bin/install-ndk-version &lt;ndk&gt;</td>
+              <td class="px-6 py-4">Installs Android NDK & CMake dynamically with universal rootless permissions.</td>
+              <td class="px-6 py-4 font-mono text-xs text-slate-400">On-demand</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-8 text-center">
+        <a href="https://github.com/hatem-noureddine/android-ci/blob/main/.agents/skills/android-ci-box/SKILL.md" target="_blank" class="inline-flex items-center gap-2 text-sm font-semibold text-sky-400 hover:text-sky-300">
+          <span>Read the full AI Agent Skill definition (.agents/skills/android-ci-box/SKILL.md)</span>
+          <span>→</span>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Interactive Diagnostics Showcase (ci-doctor)                                 -->
+  <!-- ============================================================================ -->
+  <section id="diagnostics" class="py-20 border-t border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-5 space-y-4">
+          <h2 class="text-xs font-bold uppercase tracking-widest text-sky-400 font-mono">1-Second Environment Triage</h2>
+          <h3 class="text-3xl font-extrabold text-white tracking-tight">Built-in Diagnostic Suite: <span class="text-sky-400">ci-doctor</span></h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Never waste developer or agent time wondering why a pipeline failed. <code class="text-sky-300 font-mono">ci-doctor</code> validates your JDK, Android SDK packages, KVM hardware acceleration, proxies, and enterprise mirror connectivity in milliseconds.
+          </p>
+          <ul class="space-y-2.5 text-xs text-slate-300 font-medium">
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Emits human-readable colored report or machine-readable JSON</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Checks OpenJDK 17 and OpenJDK 21 binary readiness</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Detects KVM acceleration for Gradle Managed Devices (GMD)</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Verifies CA certificates in Java truststore</li>
+          </ul>
+        </div>
+
+        <!-- Terminal Output Window -->
+        <div class="lg:col-span-7">
+          <div class="rounded-2xl glass border border-slate-800 overflow-hidden shadow-2xl font-mono text-xs">
+            <div class="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
+              </div>
+              <span class="text-slate-500 text-[11px]">runner@android-ci-box: /project</span>
+              <span class="text-slate-500 text-[11px]">bash</span>
+            </div>
+            <div class="p-5 bg-slate-950/90 text-slate-300 space-y-2 overflow-x-auto leading-relaxed">
+              <p><span class="text-sky-400">runner@android-ci-box</span>:<span class="text-indigo-400">~</span>$ ci-doctor</p>
+              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.4.8) ===</p>
+              <p><span class="text-emerald-400">[OK]</span> Operating System: Ubuntu 24.04 LTS (Noble) - Arch: aarch64 (Native arm64)</p>
+              <p><span class="text-emerald-400">[OK]</span> Current User: runner (UID: 1000, GID: 0, Rootless: OK)</p>
+              <p><span class="text-emerald-400">[OK]</span> Default Java: OpenJDK 21.0.13 (/opt/jdk-21)</p>
+              <p><span class="text-emerald-400">[OK]</span> Secondary Java: OpenJDK 17.0.21 (/opt/jdk-17 ready for switch-jdk)</p>
+              <p><span class="text-emerald-400">[OK]</span> Standalone Gradle: 9.8.2 (/opt/gradle/gradle-9.8.2/bin/gradle)</p>
+              <p><span class="text-emerald-400">[OK]</span> Android SDK: API 35, 36, 37.0 pre-installed in /opt/android-sdk</p>
+              <p><span class="text-emerald-400">[OK]</span> Build-Tools: 35.0.0, 36.0.0, 37.0.0 available</p>
+              <p><span class="text-emerald-400">[OK]</span> Fastlane: 2.241.2 (Precompiled Ruby 4.0.9 in /opt/rbenv)</p>
+              <p><span class="text-emerald-400">[OK]</span> Security: 0 Unfixed Critical CVEs (Trivy & Scout Passed)</p>
+              <p><span class="text-emerald-400">[OK]</span> Network Mode: Public Internet (Direct unthrottled access)</p>
+              <p class="text-sky-400 font-bold mt-2">✨ ALL SYSTEMS HEALTHY (0 Warnings, 0 Errors)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Footer                                                                       -->
+  <!-- ============================================================================ -->
+  <footer class="py-12 border-t border-slate-800 bg-slate-950 text-slate-400 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      
+      <div class="flex items-center gap-3">
+        <span class="text-xl">🤖</span>
+        <div>
+          <p class="font-bold text-white text-sm">hateum/android-ci-box</p>
+          <p class="text-slate-500">Fast, rootless Android CI/CD container for modern engineering teams.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 text-sm">
+        <a href="https://github.com/hatem-noureddine/android-ci" target="_blank" class="hover:text-white transition">GitHub</a>
+        <a href="https://hub.docker.com/r/hateum/android-ci-box" target="_blank" class="hover:text-white transition">Docker Hub</a>
+        <a href="https://github.com/hatem-noureddine/android-ci/releases" target="_blank" class="hover:text-white transition">Releases</a>
+        <a href="https://github.com/hatem-noureddine/android-ci/blob/main/LICENSE" target="_blank" class="hover:text-white transition">MIT License</a>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ============================================================================ -->
+  <!-- Client Scripts (Tabs & Copy Utilities)                                       -->
+  <!-- ============================================================================ -->
+  <script>
+    // Copy Command to clipboard with feedback
+    function copyCommand(elemId, btn) {
+      const text = document.getElementById(elemId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = `<span class="text-emerald-400">✓ Copied!</span>`;
+        setTimeout(() => btn.innerHTML = orig, 2000);
+      });
+    }
+
+    // Copy Active CI Code
+    function copyActiveCiCode(btn) {
+      const activePre = document.querySelector('pre[id^="code-"]:not(.hidden) code');
+      if (activePre) {
+        navigator.clipboard.writeText(activePre.innerText).then(() => {
+          const orig = btn.innerHTML;
+          btn.innerHTML = `<span class="text-emerald-400">✓ Copied!</span>`;
+          setTimeout(() => btn.innerHTML = orig, 2000);
+        });
+      }
+    }
+
+    // Video sound toggle
+    function toggleVideoSound() {
+      const v = document.getElementById('hero-video');
+      const btn = document.getElementById('sound-btn');
+      v.muted = !v.muted;
+      btn.innerText = v.muted ? '🔊' : '🔇';
+    }
+
+    // Video play/pause toggle
+    function toggleVideoPlay() {
+      const v = document.getElementById('hero-video');
+      const btn = document.getElementById('play-btn');
+      if (v.paused) {
+        v.play();
+        btn.innerText = '⏸️';
+      } else {
+        v.pause();
+        btn.innerText = '▶️';
+      }
+    }
+
+    // Architecture Tabs Switcher
+    function switchArchTab(tab) {
+      const tabs = ['tier', 'network', 'multiarch'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}-btn`);
+        const content = document.getElementById(`tab-${t}-content`);
+        if (t === tab) {
+          btn.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-sky-500 text-slate-950 font-bold transition';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    // CI/CD Platform Tabs Switcher
+    const ciFilenames = {
+      'gha-action': '.github/workflows/android.yml',
+      'gha-job': '.github/workflows/android-container.yml',
+      'gitlab': '.gitlab-ci.yml',
+      'jenkins': 'Jenkinsfile',
+      'bitbucket': 'bitbucket-pipelines.yml',
+      'circleci': '.circleci/config.yml',
+      'azure': 'azure-pipelines.yml'
+    };
+
+    function switchCiTab(tabKey) {
+      const keys = Object.keys(ciFilenames);
+      keys.forEach(k => {
+        const btn = document.getElementById(`tab-${k}-btn`);
+        const code = document.getElementById(`code-${k}`);
+        if (k === tabKey) {
+          btn.className = 'py-2 px-3 rounded-lg text-xs font-semibold bg-sky-500 text-slate-950 font-bold transition';
+          code.classList.remove('hidden');
+          document.getElementById('ci-filename').innerText = ciFilenames[k];
+        } else {
+          btn.className = 'py-2 px-3 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition';
+          code.classList.add('hidden');
+        }
+      });
+    }
   </script>
+
 </body>
 </html>
