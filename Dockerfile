@@ -87,9 +87,10 @@ RUN apt-get update -qq && \
     fi && \
     LFS_VERSION="3.8.1" && \
     curl -fsSL "https://github.com/git-lfs/git-lfs/releases/download/v${LFS_VERSION}/git-lfs-linux-${ARCH}-v${LFS_VERSION}.tar.gz" -o /tmp/git-lfs.tar.gz && \
-    mkdir -p /tmp/git-lfs && \
+    mkdir -p /tmp/git-lfs /home/runner && \
     tar -xzf /tmp/git-lfs.tar.gz -C /tmp/git-lfs --strip-components=1 && \
     /tmp/git-lfs/install.sh && \
+    git lfs install --system && \
     rm -rf /tmp/git-lfs /tmp/git-lfs.tar.gz && \
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
