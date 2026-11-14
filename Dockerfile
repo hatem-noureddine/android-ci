@@ -128,8 +128,8 @@ RUN git clone --depth 1 https://github.com/rbenv/rbenv.git "${RBENV_ROOT}" && \
     chmod -R 755 "${RBENV_ROOT}" && \
     MAKE_OPTS="-j$(nproc)" RUBY_CONFIGURE_OPTS="--disable-install-doc --disable-yjit" "${RBENV_ROOT}/bin/rbenv" install "${RUBY_VERSION}" && \
     "${RBENV_ROOT}/bin/rbenv" global "${RUBY_VERSION}" && \
-    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" "json:3.1.0" --no-document && \
-    rm -f "${RBENV_ROOT}/versions/${RUBY_VERSION}/lib/ruby/gems/4.0.0/specifications/default/json-2.18.0.gemspec" && \
+    "${RBENV_ROOT}/shims/gem" install "bundler:${BUNDLER_VERSION}" "fastlane:${FASTLANE_VERSION}" "json:2.21.2" --no-document && \
+    rm -f "${RBENV_ROOT}/versions/${RUBY_VERSION}/lib/ruby/gems/4.0.0/specifications/default/json-"*.gemspec && \
     "${RBENV_ROOT}/bin/rbenv" rehash && \
     chmod -R 777 "${RBENV_ROOT}" && \
     rm -rf /root/.gem /root/.bundle /home/runner/.gem /home/runner/.bundle /tmp/* /var/tmp/*
