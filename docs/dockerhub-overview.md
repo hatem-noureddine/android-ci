@@ -1,6 +1,5 @@
 # Android CI/CD Build Box (`hateum/android-ci-box`)
 
-[![Docker Hub](https://img.shields.io/docker/pulls/hateum/android-ci-box?style=flat-square&logo=docker&color=0088ff)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Multi-Arch](https://img.shields.io/badge/architecture-amd64%20%7C%20arm64-blue?style=flat-square)](https://hub.docker.com/r/hateum/android-ci-box)
 [![Security](https://img.shields.io/badge/Trivy%20Audit-0%20Critical%20CVEs-brightgreen?style=flat-square&logo=security)](https://github.com/hatem-noureddine/android-ci/security)
 [![Gradle](https://img.shields.io/badge/Gradle-9.8.2-02303A?style=flat-square&logo=gradle)](https://gradle.org)
