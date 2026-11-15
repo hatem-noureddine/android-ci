@@ -140,6 +140,11 @@ RUN mkdir -p /opt/gradle /opt/gradle/init.d && \
     unzip -q /tmp/gradle.zip -d /opt/gradle && \
     ln -s "/opt/gradle/gradle-${GRADLE_VERSION}/bin/gradle" /usr/local/bin/gradle && \
     printf "allprojects {\n    tasks.withType(JavaCompile).configureEach {\n        options.fork = true\n        options.encoding = 'UTF-8'\n    }\n}\ngradle.projectsLoaded {\n    rootProject.logger.info('⚡ [hateum/android-ci-box] CI Optimizations active: parallel=true, buildCache=true, daemon=false')\n}\n" > /opt/gradle/init.d/ci-optimizations.gradle && \
+    GRADLE_DIST_HASH="8wepis63pzuhrlfaiy04bagwu" && \
+    mkdir -p "/home/runner/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-bin/${GRADLE_DIST_HASH}" && \
+    cp -r "/opt/gradle/gradle-${GRADLE_VERSION}" "/home/runner/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-bin/${GRADLE_DIST_HASH}/" && \
+    touch "/home/runner/.gradle/wrapper/dists/gradle-${GRADLE_VERSION}-bin/${GRADLE_DIST_HASH}/gradle-${GRADLE_VERSION}-bin.zip.ok" && \
+    chmod -R 777 /home/runner/.gradle && \
     rm -f /tmp/gradle.zip
 
 # Configure default JAVA_HOME, ANDROID_AVD_HOME and PATH (including Gradle and Android tools)

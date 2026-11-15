@@ -42,6 +42,25 @@ jobs:
       - name: Run Actionlint (GitHub Workflows Linter)
         uses: raven-actions/actionlint@v2
 
+      - name: Validate CI Templates YAML Syntax
+        run: |
+          python3 -m pip install --quiet pyyaml || true
+          python3 -c "
+          import yaml, glob, sys
+          files = glob.glob('ci-templates/**/*.yml', recursive=True) + glob.glob('ci-templates/**/.gitlab-ci.yml', recursive=True)
+          failed = False
+          for f in files:
+              try:
+                  with open(f, 'r') as fp:
+                      list(yaml.safe_load_all(fp))
+                  print(f'✔ Valid YAML: {f}')
+              except Exception as e:
+                  print(f'✘ Invalid YAML: {f} -> {e}', file=sys.stderr)
+                  failed = True
+          if failed:
+              sys.exit(1)
+          "
+
   # ============================================================================
   # Job 2: Build, Security Scan (Trivy) & Run Comprehensive Test Suite
   # ============================================================================

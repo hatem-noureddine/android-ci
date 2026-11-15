@@ -166,6 +166,22 @@ else
     exit 1
 fi
 
+# Verify detect-android-project on modern Kotlin DSL ComposeCatalogProject
+echo "Verifying detect-android-project on ComposeCatalogProject (Version Catalog & Kotlin DSL)..."
+COMPOSE_DETECT_OUT=$(detect-android-project /project/test_projects/ComposeCatalogProject)
+echo "$COMPOSE_DETECT_OUT"
+if echo "$COMPOSE_DETECT_OUT" | grep -q "Android Project       : Yes" && \
+   echo "$COMPOSE_DETECT_OUT" | grep -q "Gradle Wrapper        : 9.8.2" && \
+   echo "$COMPOSE_DETECT_OUT" | grep -q "Android Gradle Plugin : 8.9.0" && \
+   echo "$COMPOSE_DETECT_OUT" | grep -q "Target compileSdk     : 35" && \
+   echo "$COMPOSE_DETECT_OUT" | grep -q "Target buildTools     : 35.0.0" && \
+   echo "$COMPOSE_DETECT_OUT" | grep -q "Target Java Version   : 21"; then
+    echo -e "${GREEN}✔ detect-android-project correctly parsed ComposeCatalogProject!${RESET}"
+else
+    echo -e "${RED}✘ detect-android-project failed ComposeCatalogProject detection!${RESET}"
+    exit 1
+fi
+
 gh --version
 echo -e "${GREEN}✔ All CLI tools verified!${RESET}\n"
 

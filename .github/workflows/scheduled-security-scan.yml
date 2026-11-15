@@ -1,0 +1,52 @@
+name: Scheduled Security & Vulnerability Scan
+
+on:
+  schedule:
+    # Run every Monday at 04:00 UTC
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-scan:
+    name: Trivy Vulnerability Scan (${{ matrix.image-variant }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image-variant: [latest, slim]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Pull Docker Image
+        run: docker pull "hateum/android-ci-box:${{ matrix.image-variant }}"
+
+      - name: Run Trivy Vulnerability Scanner (SARIF Report)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: "hateum/android-ci-box:${{ matrix.image-variant }}"
+          format: sarif
+          output: "trivy-results-${{ matrix.image-variant }}.sarif"
+          severity: CRITICAL,HIGH
+          vuln-type: os,library
+
+      - name: Upload Trivy Results to GitHub Security Tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results-${{ matrix.image-variant }}.sarif"
+          category: "trivy-${{ matrix.image-variant }}"
+
+      - name: Enforce Zero Unfixed Critical Vulnerabilities
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: "hateum/android-ci-box:${{ matrix.image-variant }}"
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL

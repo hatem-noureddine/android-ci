@@ -8,18 +8,17 @@ set -u
 MODE="full"
 for arg in "$@"; do
     case "$arg" in
-        --summary|-s|--json)
-            MODE="json"
-            ;;
-        --help|-h)
-            echo "Usage: ci-doctor [--summary|--json|-s|-h]"
-            echo "  (no args)  Run full interactive diagnostic with network connectivity probes"
-            echo "  --summary  Output machine-readable JSON status report without network delay"
-            echo "  --json     Alias for --summary"
-            exit 0
-            ;;
-        *)
-            ;;
+    --summary | -s | --json)
+        MODE="json"
+        ;;
+    --help | -h)
+        echo "Usage: ci-doctor [--summary|--json|-s|-h]"
+        echo "  (no args)  Run full interactive diagnostic with network connectivity probes"
+        echo "  --summary  Output machine-readable JSON status report without network delay"
+        echo "  --json     Alias for --summary"
+        exit 0
+        ;;
+    *) ;;
     esac
 done
 
@@ -169,15 +168,15 @@ if [ "$MODE" = "json" ]; then
 
     cat <<EOF
 {
-  "status": $( [ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"' ),
-  "version": "1.6.0",
+  "status": $([ "$HEALTHY" = true ] && echo '"healthy"' || echo '"unhealthy"'),
+  "version": "1.6.1",
   "system": {
     "arch": "$(clean_token "$OS_ARCH")",
     "dpkg_arch": "$(clean_token "$DPKG_ARCH")",
     "uid": $CUR_UID,
     "gid": $CUR_GID,
     "user": "$(clean_token "$CUR_USER")",
-    "is_root": $( [ "$CUR_UID" -eq 0 ] && echo "true" || echo "false" )
+    "is_root": $([ "$CUR_UID" -eq 0 ] && echo "true" || echo "false")
   },
   "java": {
     "java_home": "$(clean_token "$JAVA_HOME_VAL")",
@@ -202,12 +201,12 @@ if [ "$MODE" = "json" ]; then
     "gh": "$(clean_token "$GH_VER")"
   },
   "network": {
-    "proxy": "$( [ -n "$PROXY_VAL" ] && clean_token "$PROXY_VAL" || echo "none" )",
+    "proxy": "$([ -n "$PROXY_VAL" ] && clean_token "$PROXY_VAL" || echo "none")",
     "ca_certificates_count": $CA_COUNT,
-    "nexus_mirror": "$( [ -n "$MIRROR_VAL" ] && clean_token "$MIRROR_VAL" || echo "direct" )",
-    "nexus_ruby_mirror": "$( [ -n "$RUBY_MIRROR_VAL" ] && clean_token "$RUBY_MIRROR_VAL" || echo "rubygems.org" )",
+    "nexus_mirror": "$([ -n "$MIRROR_VAL" ] && clean_token "$MIRROR_VAL" || echo "direct")",
+    "nexus_ruby_mirror": "$([ -n "$RUBY_MIRROR_VAL" ] && clean_token "$RUBY_MIRROR_VAL" || echo "rubygems.org")",
     "offline_fallback": "$(clean_token "$OFFLINE_STATUS")",
-    "build_cache": "$( [ -n "$CACHE_VAL" ] && clean_token "$CACHE_VAL" || echo "local" )"
+    "build_cache": "$([ -n "$CACHE_VAL" ] && clean_token "$CACHE_VAL" || echo "local")"
   },
   "virtualization": {
     "kvm_available": $KVM_ACCEL

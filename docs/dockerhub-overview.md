@@ -14,6 +14,25 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 ---
 
+## 📦 Image Variants Matrix (`:slim` vs `:latest`)
+
+Choose the variant that best balances download speed and emulator capabilities:
+
+| Feature / Tool | `:slim` (Fast Builds) | `:latest` / `:full` (Batteries-Included) |
+| :--- | :---: | :---: |
+| **Download Size (Compressed)** | **~2.2 GB** (~35% smaller!) | **~3.5 GB** |
+| **Android SDKs (API 35, 36, 37)** | ✅ Yes | ✅ Yes |
+| **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
+| **Dual OpenJDK (17 & 21)** | ✅ Yes (`switch-jdk`) | ✅ Yes (`switch-jdk`) |
+| **Ruby 4.0.9 + Fastlane 2.241.2** | ✅ Yes | ✅ Yes |
+| **Bundletool 1.18.3 & Android CLI** | ✅ Yes | ✅ Yes |
+| **Dual-Mode Enterprise Network** | ✅ Yes | ✅ Yes |
+| **Sigstore Cosign & SPDX SBOM** | ✅ Yes | ✅ Yes |
+| **Android Emulator (GMD & UI Tests)**| ❌ No (Stripped for speed) | ✅ Yes (Preinstalled on amd64) |
+| **Recommended For** | Linting, Unit Tests, Assemble, Fastlane Deploy | End-to-End Instrumented Tests & GMD |
+
+---
+
 ## ⚖️ Why `hateum/android-ci-box`? (Feature Comparison)
 
 | Capability | Standard Android CI Images | `hateum/android-ci-box` |
@@ -281,7 +300,20 @@ build_aab:
     paths:
       - app/build/outputs/bundle/release/*.aab
 ```
-*For Jenkins, Bitbucket Pipelines, and CircleCI, see [`examples/ci/`](examples/ci/).*
+### 3. Turnkey Enterprise CI Templates & GitLab Component
+
+Production-ready, battle-tested templates are located in [`ci-templates/`](https://github.com/hatem-noureddine/android-ci/tree/main/ci-templates):
+- **GitLab CI Component**: Modern parameterized GitLab 16+ catalog component (`spec: inputs: ...`).
+- **GitLab CI Pipeline**: Full multi-stage pipeline with cache, proxy, and test artifacts.
+- **Jenkins Declarative Pipeline**: Hardened rootless Docker agent (`-u 1000:1000`) with volume cache and JUnit reports.
+- **Bitbucket Pipelines**: Reusable step anchors with custom Gradle cache definitions.
+- **GitHub Actions Reusable Pipeline**: Organization-wide callable workflow (`workflow_call`).
+
+### 4. ARM64 Cloud Testing & Device Farms
+When running CI on ARM64 nodes (where the Google x86_64 emulator is unavailable), use the built-in CLI dispatcher to run tests on physical Google Firebase Test Lab devices:
+```bash
+run-firebase-testlab --auto-build --device Pixel8 --api 34
+```
 
 ---
 
