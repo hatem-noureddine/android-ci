@@ -69,6 +69,7 @@ The image provides specialized CLI utilities that you should leverage when autom
 | `install-sdk-version` | `/usr/local/bin/install-sdk-version <api>` | Installs older/preview SDK platforms using the new `android sdk` CLI with `sdkmanager` fallback. |
 | `install-ndk-version` | `/usr/local/bin/install-ndk-version <ndk> [cmake]` | Dynamically installs Android NDK and CMake with rootless universal permissions. |
 | `bundletool` | `/usr/local/bin/bundletool` | Standalone wrapper for Google's Bundletool 1.18.3. |
+| `run-firebase-testlab` | `/usr/local/bin/run-firebase-testlab` | Dispatches instrumented UI tests to Google Firebase Test Lab (essential for ARM64 runners). |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | Official Google Android CLI (modern replacement for sdkmanager/avdmanager). |
 
 ---

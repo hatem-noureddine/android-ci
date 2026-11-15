@@ -1,0 +1,62 @@
+# ==============================================================================
+# GitLab CI Component: Android Build, Lint & Test Suite
+# ==============================================================================
+# Modern reusable GitLab Component utilizing hateum/android-ci-box.
+# Compatible with GitLab 16.0+ Component Catalog architecture.
+# ==============================================================================
+
+spec:
+  inputs:
+    image_tag:
+      type: string
+      default: "slim"
+      description: "Docker image variant: 'slim' for fast headless builds (~2.2GB), or 'latest' for full emulator toolchain (~3.5GB)."
+    java_version:
+      type: string
+      default: "21"
+      description: "JDK version to use in the container: '17' or '21'."
+    gradle_tasks:
+      type: string
+      default: "check assembleRelease"
+      description: "Space-separated Gradle tasks to execute."
+    cache_policy:
+      type: string
+      default: "pull-push"
+      description: "GitLab cache policy: 'pull-push', 'pull', or 'push'."
+    run_doctor:
+      type: boolean
+      default: true
+      description: "Whether to run ci-doctor diagnostic check before Gradle build."
+
+---
+
+android_job:
+  image: "hateum/android-ci-box:$[[ inputs.image_tag ]]"
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+    GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4 -Dorg.gradle.jvmargs=-Xmx3072m"
+  cache:
+    key:
+      files:
+        - gradle/wrapper/gradle-wrapper.properties
+        - "**/*.gradle*"
+        - "**/libs.versions.toml"
+    paths:
+      - .gradle/caches/
+      - .gradle/wrapper/
+    policy: $[[ inputs.cache_policy ]]
+  before_script:
+    - if [ "$[[ inputs.java_version ]]" = "17" ]; then switch-jdk 17; fi
+    - if [ "$[[ inputs.run_doctor ]]" = "true" ]; then ci-doctor; fi
+    - detect-android-project
+  script:
+    - ./gradlew $[[ inputs.gradle_tasks ]] --no-daemon --stacktrace
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - "**/build/outputs/apk/**/*.apk"
+      - "**/build/outputs/bundle/**/*.aab"
+      - "**/build/reports/**"
+    reports:
+      junit: "**/build/test-results/**/*.xml"

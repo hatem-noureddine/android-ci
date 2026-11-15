@@ -1,0 +1,68 @@
+# ==============================================================================
+# GitHub Actions Reusable Workflow for hateum/android-ci-box
+# ==============================================================================
+# Can be called from any external Android repository using `uses: ...`
+# ==============================================================================
+
+name: "Android CI Reusable Pipeline"
+
+on:
+  workflow_call:
+    inputs:
+      image-variant:
+        description: "Image variant to use: 'slim' (fast compilation, ~2.2GB) or 'latest' (full emulator, ~3.5GB)"
+        required: false
+        default: "slim"
+        type: string
+      java-version:
+        description: "JDK version to switch to ('17' or '21')"
+        required: false
+        default: "21"
+        type: string
+      gradle-tasks:
+        description: "Gradle tasks to run"
+        required: false
+        default: "lintRelease testReleaseUnitTest assembleRelease"
+        type: string
+
+jobs:
+  build:
+    name: "Android Build & Test (${{ inputs.image-variant }})"
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:${{ inputs.image-variant }}
+      options: --user 1000:1000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Switch Java Version (if needed)
+        if: inputs.java-version == '17'
+        run: switch-jdk 17
+
+      - name: Diagnostic Toolchain Check
+        run: |
+          ci-doctor
+          detect-android-project
+
+      - name: Execute Gradle Pipeline
+        run: ./gradlew ${{ inputs.gradle-tasks }} --no-daemon --stacktrace
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/build/reports/**"
+          retention-days: 7
+
+      - name: Upload Release Binaries
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            **/build/outputs/apk/release/*.apk
+            **/build/outputs/bundle/release/*.aab
+          retention-days: 14

@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Helper Utility: run-firebase-testlab
+# ==============================================================================
+# Automates building test artifacts and delegating instrumented UI testing
+# to Google Firebase Test Lab. Essential for running instrumented tests from
+# ARM64 runners (which do not support the Linux Android x86_64 emulator).
+# ==============================================================================
+set -euo pipefail
+
+APP_APK=""
+TEST_APK=""
+DEVICE_MODEL="${DEVICE_MODEL:-Pixel8}"
+DEVICE_VERSION="${DEVICE_VERSION:-34}"
+DEVICE_LOCALE="${DEVICE_LOCALE:-en}"
+DEVICE_ORIENTATION="${DEVICE_ORIENTATION:-portrait}"
+RESULTS_DIR=""
+AUTO_BUILD=false
+
+print_usage() {
+    cat <<EOF
+Usage: run-firebase-testlab [options]
+
+Options:
+  --app <path>          Path to target debug APK
+  --test <path>         Path to androidTest APK
+  --device <model>      Device model (default: Pixel8)
+  --api <version>       Android API level (default: 34)
+  --locale <locale>     Device locale (default: en)
+  --orientation <mode>  Device orientation: portrait|landscape (default: portrait)
+  --auto-build          Run './gradlew assembleDebug assembleDebugAndroidTest' before testing
+  --results-dir <name>  GCS results directory name
+  -h, --help            Show this help message
+
+Environment Variables:
+  GCP_PROJECT_ID        Google Cloud Project ID
+  GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_SERVICE_KEY
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --app)
+            APP_APK="$2"
+            shift 2
+            ;;
+        --test)
+            TEST_APK="$2"
+            shift 2
+            ;;
+        --device)
+            DEVICE_MODEL="$2"
+            shift 2
+            ;;
+        --api)
+            DEVICE_VERSION="$2"
+            shift 2
+            ;;
+        --locale)
+            DEVICE_LOCALE="$2"
+            shift 2
+            ;;
+        --orientation)
+            DEVICE_ORIENTATION="$2"
+            shift 2
+            ;;
+        --auto-build)
+            AUTO_BUILD=true
+            shift
+            ;;
+        --results-dir)
+            RESULTS_DIR="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown argument '$1'" >&2
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+echo "=== Firebase Test Lab Automation Dispatcher ==="
+
+# Check gcloud availability
+if ! command -v gcloud >/dev/null 2>&1; then
+    echo "[-] Error: 'gcloud' CLI is not installed or not in PATH." >&2
+    echo "    Install Google Cloud SDK or run via Google Cloud GitHub Actions / Docker image." >&2
+    exit 1
+fi
+
+# Auto build if requested
+if [[ "$AUTO_BUILD" = true ]]; then
+    echo "[+] Auto-building debug and androidTest APKs with Gradle..."
+    if [[ -f "./gradlew" ]]; then
+        ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
+    else
+        echo "[-] Error: ./gradlew not found in current directory." >&2
+        exit 1
+    fi
+fi
+
+# Auto-discover APKs if not provided
+if [[ -z "$APP_APK" ]]; then
+    APP_APK=$(find . -path "*/build/outputs/apk/debug/*-debug.apk" ! -name "*-androidTest.apk" | head -n 1 || true)
+fi
+
+if [[ -z "$TEST_APK" ]]; then
+    TEST_APK=$(find . -path "*/build/outputs/apk/androidTest/debug/*-androidTest.apk" | head -n 1 || true)
+fi
+
+if [[ -z "$APP_APK" || ! -f "$APP_APK" ]]; then
+    echo "[-] Error: Target APK not found. Specify with --app <path> or use --auto-build." >&2
+    exit 1
+fi
+
+if [[ -z "$TEST_APK" || ! -f "$TEST_APK" ]]; then
+    echo "[-] Error: AndroidTest APK not found. Specify with --test <path> or use --auto-build." >&2
+    exit 1
+fi
+
+echo "[+] Target APK: $APP_APK"
+echo "[+] Test APK:   $TEST_APK"
+echo "[+] Target Device: model=$DEVICE_MODEL,version=$DEVICE_VERSION,locale=$DEVICE_LOCALE,orientation=$DEVICE_ORIENTATION"
+
+GCLOUD_ARGS=(
+    firebase test android run
+    --type instrumentation
+    --app "$APP_APK"
+    --test "$TEST_APK"
+    --device "model=${DEVICE_MODEL},version=${DEVICE_VERSION},locale=${DEVICE_LOCALE},orientation=${DEVICE_ORIENTATION}"
+)
+
+if [[ -n "$RESULTS_DIR" ]]; then
+    GCLOUD_ARGS+=(--results-dir "$RESULTS_DIR")
+fi
+
+echo "[+] Executing: gcloud ${GCLOUD_ARGS[*]}"
+gcloud "${GCLOUD_ARGS[@]}"

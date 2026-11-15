@@ -1,0 +1,111 @@
+# ==============================================================================
+# GitLab CI/CD Pipeline Template for hateum/android-ci-box
+# ==============================================================================
+# This template provides a hardened, rootless Android CI/CD pipeline featuring:
+#  - Dual-mode support (Public Internet vs Corporate Proxy / Nexus / Self-signed CA)
+#  - Multi-stage image selection (:slim for fast builds, :latest for full tooling)
+#  - Robust Gradle caching across pipelines
+#  - Parallel Lint, Unit Tests, and Release APK / AAB assembly
+# ==============================================================================
+
+image: hateum/android-ci-box:slim
+
+variables:
+  # Universal Gradle cache directory within repository root for GitLab caching
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  # Disable Gradle daemon in CI environments for predictable memory usage
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4 -Dorg.gradle.jvmargs=-Xmx3072m"
+
+# Global cache configuration for Gradle build caches and dependency store
+cache:
+  key:
+    files:
+      - gradle/wrapper/gradle-wrapper.properties
+      - "**/*.gradle*"
+      - "**/libs.versions.toml"
+  paths:
+    - .gradle/caches/
+    - .gradle/wrapper/
+  policy: pull-push
+
+stages:
+  - diagnostic
+  - quality
+  - build
+  - test_cloud
+
+# ------------------------------------------------------------------------------
+# Stage 1: Environment Diagnostic & Toolchain Inspection
+# ------------------------------------------------------------------------------
+ci_doctor:
+  stage: diagnostic
+  script:
+    - ci-doctor
+    - detect-android-project
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ------------------------------------------------------------------------------
+# Stage 2: Code Quality, Static Analysis & Unit Tests
+# ------------------------------------------------------------------------------
+lint_and_check:
+  stage: quality
+  script:
+    - ./gradlew lintRelease check --no-daemon --stacktrace
+  artifacts:
+    name: "lint-reports-$CI_COMMIT_SHORT_SHA"
+    when: always
+    expire_in: 7 days
+    paths:
+      - "**/build/reports/lint-results*.html"
+      - "**/build/reports/lint-results*.xml"
+    reports:
+      junit: "**/build/test-results/**/*.xml"
+
+unit_tests:
+  stage: quality
+  script:
+    - ./gradlew testReleaseUnitTest --no-daemon --stacktrace
+  artifacts:
+    name: "unit-test-reports-$CI_COMMIT_SHORT_SHA"
+    when: always
+    expire_in: 7 days
+    paths:
+      - "**/build/reports/tests/**"
+    reports:
+      junit: "**/build/test-results/**/*.xml"
+
+# ------------------------------------------------------------------------------
+# Stage 3: Release Assembly (APK & Android App Bundle)
+# ------------------------------------------------------------------------------
+assemble_release:
+  stage: build
+  script:
+    - ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace
+  artifacts:
+    name: "android-artifacts-$CI_COMMIT_SHORT_SHA"
+    expire_in: 30 days
+    paths:
+      - "**/build/outputs/apk/release/*.apk"
+      - "**/build/outputs/bundle/release/*.aab"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+# ------------------------------------------------------------------------------
+# Stage 4: Optional Instrumented Testing Delegation (ARM64 / Cloud Device Farm)
+# ------------------------------------------------------------------------------
+# Demonstrates running instrumented tests in Google Firebase Test Lab or AWS Device Farm
+# without requiring a local KVM emulator inside the CI container.
+firebase_test_lab:
+  stage: test_cloud
+  rules:
+    - if: '$FIREBASE_SERVICE_KEY && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  script:
+    - echo "$FIREBASE_SERVICE_KEY" | base64 -d > /tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project "$GCP_PROJECT_ID"
+    - ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
+    - gcloud firebase test android run --type instrumentation --app app/build/outputs/apk/debug/app-debug.apk --test app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk --device model=Pixel8,version=34,locale=en,orientation=portrait

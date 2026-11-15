@@ -309,13 +309,24 @@ build_aab:
       - app/build/outputs/bundle/release/*.aab
 ```
 
-### 3. Exhaustive CI/CD Recipes (Jenkins, Bitbucket, CircleCI, Azure DevOps)
+### 3. Turnkey Enterprise CI Templates & GitLab Component
 
-Complete copy-pasteable configuration files are documented in our [CI/CD Integration Hub](docs/ci-integrations.md):
-- [Jenkins Declarative Pipeline (`Jenkinsfile`)](docs/ci-integrations.md#3-jenkins-declarative-pipeline)
-- [Bitbucket Pipelines (`bitbucket-pipelines.yml`)](docs/ci-integrations.md#4-bitbucket-pipelines)
-- [CircleCI Docker Executor (`.circleci/config.yml`)](docs/ci-integrations.md#5-circleci)
-- [Azure DevOps Pipelines (`azure-pipelines.yml`)](docs/ci-integrations.md#6-azure-devops-pipelines)
+Production-ready, battle-tested templates are located in [`ci-templates/`](ci-templates/):
+- **GitLab CI Pipeline**: [`ci-templates/gitlab/.gitlab-ci.yml`](ci-templates/gitlab/.gitlab-ci.yml)
+- **GitLab CI Component**: [`ci-templates/gitlab/templates/android-ci.yml`](ci-templates/gitlab/templates/android-ci.yml)
+- **Jenkins Declarative Pipeline**: [`ci-templates/jenkins/Jenkinsfile`](ci-templates/jenkins/Jenkinsfile)
+- **Bitbucket Pipelines**: [`ci-templates/bitbucket/bitbucket-pipelines.yml`](ci-templates/bitbucket/bitbucket-pipelines.yml)
+- **GitHub Actions Reusable Pipeline**: [`ci-templates/github/android-ci-workflow.yml`](ci-templates/github/android-ci-workflow.yml)
+
+### 4. ARM64 Instrumented Testing & Cloud Device Farms
+
+Google does not publish the Linux Android Emulator for `arm64`. For teams running CI on ARM64 runners (AWS Graviton, Apple Silicon, Oracle Ampere):
+1. **Cloud Device Farm Delegation**: Build APKs on ARM64, then delegate instrumented UI tests to real physical devices using our built-in dispatcher:
+   ```bash
+   run-firebase-testlab --auto-build --device Pixel8 --api 34
+   ```
+2. **Split-Runner Matrix**: Run lint, unit tests, and build on native ARM64 runners using `hateum/android-ci-box:slim`, and dispatch instrumented UI tests to an `amd64` runner with KVM using `hateum/android-ci-box:latest`.
+3. See [ADR-0018: ARM64 Instrumented Testing and Cloud Device Farms](docs/adr/0018-arm64-instrumented-testing-and-cloud-device-farms.md) for architectural details.
 
 ---
 
