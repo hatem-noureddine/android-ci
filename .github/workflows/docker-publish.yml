@@ -283,6 +283,19 @@ jobs:
             type=gha,scope=${{ matrix.arch }}-full
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}-full
 
+      - name: Native Architecture Test Suite Verification (${{ matrix.arch }})
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Pulling native ${{ matrix.arch }} test image from GHCR..."
+          IMAGE="ghcr.io/${{ github.repository }}:${VERSION}-slim-${{ matrix.arch }}"
+          docker pull "$IMAGE"
+          echo "Executing test-image.sh natively on ${{ matrix.runner }} (${{ matrix.platform }})..."
+          docker run --rm \
+            -v "$(pwd):/project" \
+            -w /project \
+            "$IMAGE" \
+            /project/tests/test-image.sh
+
   # ============================================================================
   # Job 4: Create Multi-Arch Manifest Lists & Publish to Registries
   # Merges native amd64 & arm64 images in seconds without recompilation!

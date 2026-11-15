@@ -411,6 +411,41 @@ fi
 echo -e "${GREEN}✔ Android compilation, AAB, bundletool & instrumentation build test passed!${RESET}\n"
 
 # ------------------------------------------------------------------------------
+# Test 6b: Modern Kotlin DSL & Jetpack Compose Compilation + Cache Benchmark
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}[Test 6b] Building modern Kotlin DSL & Jetpack Compose project (ComposeCatalogProject)...${RESET}"
+cd /project/test_projects/ComposeCatalogProject
+
+chmod +x gradlew
+
+# Cold-start benchmark
+echo "Timing cold-start build (ComposeCatalogProject assembleDebug)..."
+START_COLD=$(date +%s)
+./gradlew test assembleDebug --no-daemon --build-cache
+END_COLD=$(date +%s)
+COLD_DURATION=$((END_COLD - START_COLD))
+echo -e "${CYAN}⚡ Cold-start build completed in ${COLD_DURATION}s${RESET}"
+
+if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+    echo -e "${GREEN}✔ Compose debug APK successfully generated:${RESET}"
+    ls -lh app/build/outputs/apk/debug/app-debug.apk
+else
+    echo -e "${RED}✘ Compose debug APK not found!${RESET}"
+    exit 1
+fi
+
+# Incremental build / Build cache benchmark
+echo "Timing incremental build with build cache..."
+START_WARM=$(date +%s)
+./gradlew assembleDebug --no-daemon --build-cache
+END_WARM=$(date +%s)
+WARM_DURATION=$((END_WARM - START_WARM))
+echo -e "${CYAN}⚡ Cached build completed in ${WARM_DURATION}s (Speedup: ${COLD_DURATION}s -> ${WARM_DURATION}s)${RESET}"
+
+echo -e "${GREEN}✔ Kotlin DSL & Jetpack Compose compilation, unit tests and cache benchmarks passed!${RESET}\n"
+cd /project/test_projects/SampleProject
+
+# ------------------------------------------------------------------------------
 # Test 7: Fastlane Test Lane Execution
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}[Test 7/7] Executing Fastlane test lanes...${RESET}"
