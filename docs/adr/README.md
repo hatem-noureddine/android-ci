@@ -25,3 +25,4 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0019](0019-cold-start-optimization-and-ecosystem-resilience.md) | Cold-Start Optimization, Ecosystem Hygiene and Modern Kotlin DSL Testing | Accepted | 2026-11-15 |
 | [ADR-0020](0020-total-quality-pack-native-arm64-validation-and-compose-benchmarks.md) | Native Multi-Architecture Validation, Jetpack Compose End-to-End Testing and Performance Benchmarks | Accepted | 2026-11-15 |
 | [ADR-0021](0021-production-hardening-cgroups-memory-tuning-and-kpi-preflight.md) | Production Hardening, Dynamic Cgroup Memory Tuning and KPI Pre-flight Gate | Accepted | 2026-11-15 |
+| [ADR-0022](0022-node-24-actions-migration-and-trivy-sarif-remediation.md) | GitHub Actions Node 24 Migration, Python Toolchain Security Upgrades and Comprehensive Trivy SARIF Remediation | Accepted | 2026-11-15 |

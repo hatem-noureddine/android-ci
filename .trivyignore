@@ -7,3 +7,23 @@ CVE-2026-8763
 
 # Upstream Ruby bundled default json gem (overridden by fastlane-bundled json >= 2.19.2)
 CVE-2026-33210
+
+# Upstream Git LFS 3.8.1 official binary bundled Go packages
+# (Static binary compiled by upstream Git LFS maintainers; vulnerabilities in internal Go net/http, crypto, text libraries not exploitable in CI/CD context)
+CVE-2026-97054
+CVE-2026-56851
+CVE-2026-97045
+CVE-2026-97032
+CVE-2026-78663
+CVE-2026-78660
+CVE-2026-78659
+CVE-2026-78669
+CVE-2026-78661
+GO-2026-5932
+CVE-2026-78662
+CVE-2026-56855
+CVE-2026-56854
+
+# Upstream Gradle 9.8.2 wrapper bundled Guava library
+# (Bundled inside Gradle distribution zip for Gradle core internal use; not exposed to untrusted serialization)
+CVE-2026-102554
