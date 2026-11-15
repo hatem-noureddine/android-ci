@@ -34,7 +34,7 @@ jobs:
 
       - name: Update Docker Hub Description & Overview
         if: steps.check_creds.outputs.has_creds == 'true'
-        uses: peter-evans/dockerhub-description@v4.0.0
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}

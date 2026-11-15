@@ -43,7 +43,7 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 | Feature / Capability | `latest` (Full Batteries-Included) | `slim` (Ultra-Fast CI) |
 | :--- | :--- | :--- |
-| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.6.3`) | `hateum/android-ci-box:slim` (or `1.6.3-slim`) |
+| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.6.4`) | `hateum/android-ci-box:slim` (or `1.6.4-slim`) |
 | **Compressed Size** | ~3.5 GB | **~2.2 GB (~35% faster download)** |
 | **Android SDK APIs (35, 36, 37)** | ✅ Yes | ✅ Yes |
 | **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
