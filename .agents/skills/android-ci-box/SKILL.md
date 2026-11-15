@@ -314,11 +314,11 @@ For detailed operational guides, see the specialized references in this skill:
 - **Enterprise Networking**: [`references/enterprise-networking.md`](references/enterprise-networking.md) (Proxy routing, SSL truststore injection, internal mirrors)
 
 ### Ready-to-Use Templates:
-- [GitLab CI Pipeline](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/.gitlab-ci.yml)
-- [GitHub Actions Workflow](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/github-actions.yml)
-- [Declarative Jenkinsfile](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/Jenkinsfile)
-- [Bitbucket Pipelines](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/bitbucket-pipelines.yml)
-- [CircleCI Configuration](file:///Users/hatemnoureddine/workspace/docker/android/examples/ci/circleci-config.yml)
+- [Enterprise CI Templates Hub](file:///Users/hatemnoureddine/workspace/docker/android/ci-templates/README.md)
+- [GitLab CI Pipeline & Component](file:///Users/hatemnoureddine/workspace/docker/android/ci-templates/gitlab/.gitlab-ci.yml)
+- [Declarative Jenkinsfile](file:///Users/hatemnoureddine/workspace/docker/android/ci-templates/jenkins/Jenkinsfile)
+- [Bitbucket Pipelines](file:///Users/hatemnoureddine/workspace/docker/android/ci-templates/bitbucket/bitbucket-pipelines.yml)
+- [GitHub Actions Reusable Pipeline](file:///Users/hatemnoureddine/workspace/docker/android/ci-templates/github/android-ci-workflow.yml)
 
 ### External Official Documentation:
 - [Google Android CLI (`android`)](https://developer.android.com/tools/android)

@@ -20,3 +20,5 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0014](0014-docker-scout-remediation-and-docsify-polish.md) | Docker Scout Vulnerability Remediation and Documentation Polish | Accepted | 2026-11-14 |
 | [ADR-0015](0015-supply-chain-security-cosign-and-sbom.md) | Supply Chain Security with Keyless Cosign / Sigstore and SPDX SBOM Attestations | Accepted | 2026-11-14 |
 | [ADR-0016](0016-multi-stage-image-variants-slim-vs-full.md) | Multi-Stage Image Variants (Slim vs Full) | Accepted | 2026-11-15 |
+| [ADR-0017](0017-enterprise-ci-cd-templates-and-components.md) | Pre-Packaged Enterprise CI/CD Templates and GitLab Component Architecture | Accepted | 2026-11-15 |
+| [ADR-0018](0018-arm64-instrumented-testing-and-cloud-device-farms.md) | ARM64 Instrumented Testing Strategy and Cloud Device Farm Delegation | Accepted | 2026-11-15 |

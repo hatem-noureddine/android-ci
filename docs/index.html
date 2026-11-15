@@ -460,7 +460,7 @@ flowchart TD
     Start([Host launches container]) --> ArchCheck{Detect CPU Architecture}
     
     ArchCheck -->|x86_64 / amd64| AMD["Run native amd64 binaries<br/>• Android SDK Emulator available<br/>• Full KVM / GMD hardware emulation"]
-    ArchCheck -->|aarch64 / arm64| ARM["Run native arm64 binaries<br/>• Apple Silicon & AWS Graviton native speed<br/>• Emulator package omitted (Google constraint)"]
+    ArchCheck -->|aarch64 / arm64| ARM["Run native arm64 binaries<br/>• Apple Silicon & AWS Graviton native speed<br/>• Cloud Device Farms delegation (run-firebase-testlab)<br/>• Split-Runner Matrix (ADR-0018)"]
 
     AMD --> ScanProj[Scan Android project in /project]
     ARM --> ScanProj
@@ -496,7 +496,7 @@ flowchart TD
           Ready-to-Use CI/CD Configurations
         </h3>
         <p class="mt-4 text-slate-400 text-base">
-          Drop-in pipeline files for your favorite CI platform with built-in caching and best practices.
+          Drop-in pipeline files for your favorite CI platform with built-in caching and best practices. Full turnkey templates & GitLab Component available in <a href="https://github.com/hatem-noureddine/android-ci/tree/main/ci-templates" class="text-sky-400 hover:underline font-mono">ci-templates/</a>.
         </p>
 
         <!-- Platform Tabs -->

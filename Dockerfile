@@ -152,7 +152,8 @@ COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
 COPY bin/install-ndk-version /usr/local/bin/install-ndk-version
 COPY bin/detect-android-project /usr/local/bin/detect-android-project
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project
+COPY bin/run-firebase-testlab /usr/local/bin/run-firebase-testlab
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project /usr/local/bin/run-firebase-testlab
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
@@ -178,15 +179,21 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
         rm -rf "${BC_DIR}/bcprov-jdk18on"/* "${BC_DIR}/bcpkix-jdk18on"/* && \
         mkdir -p "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}" "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}" && \
         curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" && \
-        curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar"; \
+        curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" && \
+        mkdir -p "${BC_DIR}/bcprov-jdk18on/1.79" "${BC_DIR}/bcpkix-jdk18on/1.79" && \
+        ln -snf "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" "${BC_DIR}/bcprov-jdk18on/1.79/bcprov-jdk18on-1.79.jar" && \
+        ln -snf "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" "${BC_DIR}/bcpkix-jdk18on/1.79/bcpkix-jdk18on-1.79.jar"; \
     fi && \
     GUAVA_VERSION="33.8.0-jre" && \
     GUAVA_DIR="${ANDROID_HOME}/cmdline-tools/latest/lib/external/com/google/guava/guava" && \
     if [ -d "${GUAVA_DIR}" ]; then \
         rm -rf "${GUAVA_DIR}"/* && \
         mkdir -p "${GUAVA_DIR}/${GUAVA_VERSION}" && \
-        curl -fsSL "https://repo1.maven.org/maven2/com/google/guava/guava/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" -o "${GUAVA_DIR}/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar"; \
+        curl -fsSL "https://repo1.maven.org/maven2/com/google/guava/guava/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" -o "${GUAVA_DIR}/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" && \
+        mkdir -p "${GUAVA_DIR}/33.4.0-jre" && \
+        ln -snf "${GUAVA_DIR}/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" "${GUAVA_DIR}/33.4.0-jre/guava-33.4.0-jre.jar"; \
     fi && \
+    "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --version && \
     mkdir -p /opt/bundletool && \
     curl -fsSL "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar" -o "${BUNDLETOOL_PATH}" && \
     printf '#!/bin/sh\nexec java -jar /opt/bundletool/bundletool.jar "$@"\n' > /usr/local/bin/bundletool && \

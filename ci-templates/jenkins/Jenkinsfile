@@ -1,0 +1,86 @@
+// ==============================================================================
+// Jenkins Declarative Pipeline Template for hateum/android-ci-box
+// ==============================================================================
+// Hardened, rootless Docker pipeline with persistent caching & JUnit reporting.
+// ==============================================================================
+
+pipeline {
+    agent {
+        docker {
+            image 'hateum/android-ci-box:slim'
+            // Run rootless (UID 1000:1000) to ensure zero permission leaks on Jenkins agents
+            args '-u 1000:1000 -v gradle-cache:/home/runner/.gradle'
+        }
+    }
+
+    options {
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        ansiColor('xterm')
+    }
+
+    environment {
+        GRADLE_USER_HOME = '/home/runner/.gradle'
+        GRADLE_OPTS      = '-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4 -Dorg.gradle.jvmargs=-Xmx3072m'
+    }
+
+    stages {
+        stage('Diagnostic & Environment') {
+            steps {
+                sh 'ci-doctor'
+                sh 'detect-android-project'
+            }
+        }
+
+        stage('Code Quality & Lint') {
+            steps {
+                sh './gradlew lintRelease check --no-daemon --stacktrace'
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'app/build/reports',
+                        reportFiles: 'lint-results-release.html',
+                        reportName: 'Android Lint Report'
+                    ])
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh './gradlew testReleaseUnitTest --no-daemon --stacktrace'
+            }
+            post {
+                always {
+                    junit testResults: '**/build/test-results/**/*.xml', allowEmptyResults: true
+                }
+            }
+        }
+
+        stage('Assemble Release Artifacts') {
+            steps {
+                sh './gradlew assembleRelease bundleRelease --no-daemon --stacktrace'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '**/build/outputs/apk/**/*.apk, **/build/outputs/bundle/**/*.aab',
+                                     fingerprint: true,
+                                     allowEmptyArchive: false
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "Android CI build failed. Inspect console logs and JUnit test reports."
+        }
+        cleanup {
+            cleanWs deleteDirs: true, notFailBuild: true
+        }
+    }
+}

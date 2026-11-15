@@ -1,0 +1,56 @@
+# ==============================================================================
+# Bitbucket Pipelines Template for hateum/android-ci-box
+# ==============================================================================
+# Hardened Android CI pipeline with custom Gradle caches & artifact storage.
+# ==============================================================================
+
+image: hateum/android-ci-box:slim
+
+definitions:
+  caches:
+    gradle-cache: /home/runner/.gradle/caches
+    gradle-wrapper: /home/runner/.gradle/wrapper
+  steps:
+    - step: &diagnostics
+        name: Diagnostic & Project Detection
+        script:
+          - ci-doctor
+          - detect-android-project
+
+    - step: &lint-and-test
+        name: Lint & Unit Tests
+        caches:
+          - gradle-cache
+          - gradle-wrapper
+        script:
+          - ./gradlew lintRelease testReleaseUnitTest --no-daemon --stacktrace
+        artifacts:
+          - "**/build/reports/**"
+          - "**/build/test-results/**"
+
+    - step: &assemble-release
+        name: Assemble Release APK & AAB
+        caches:
+          - gradle-cache
+          - gradle-wrapper
+        script:
+          - ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace
+        artifacts:
+          - "**/build/outputs/apk/release/*.apk"
+          - "**/build/outputs/bundle/release/*.aab"
+
+pipelines:
+  default:
+    - step: *diagnostics
+    - step: *lint-and-test
+
+  branches:
+    main:
+      - step: *diagnostics
+      - step: *lint-and-test
+      - step: *assemble-release
+
+  pull-requests:
+    '**':
+      - step: *diagnostics
+      - step: *lint-and-test
