@@ -7,7 +7,7 @@
 #           ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
 
-FROM ubuntu:24.04
+FROM ubuntu:24.04 AS slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -162,9 +162,6 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     rm -f /tmp/cmdline-tools.zip && \
     printf "8937372298270f79dd511e7c739bc7a53929e002\n24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e\n" > "${ANDROID_HOME}/licenses/android-sdk-license" && \
     printf "84831b9409646a918e30573bab4c9c91346d8abd\n" > "${ANDROID_HOME}/licenses/android-sdk-preview-license" && \
-    if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
-        "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "emulator"; \
-    fi && \
     "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
         "platform-tools" \
         "platforms;android-35" \
@@ -217,7 +214,8 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD ["ci-doctor", "--summar
 ARG VERSION="1.0.0"
 LABEL org.opencontainers.image.title="hateum/android-ci-box" \
       org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection" \
+      org.opencontainers.image.variant="slim" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box (Slim Variant) with Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection" \
       org.opencontainers.image.authors="Hatem Noureddine" \
       org.opencontainers.image.vendor="hateum" \
       org.opencontainers.image.licenses="MIT" \
@@ -226,3 +224,16 @@ LABEL org.opencontainers.image.title="hateum/android-ci-box" \
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
+
+# ==============================================================================
+# Target: full (Includes Android SDK Emulator on amd64 for Gradle Managed Devices & UI testing)
+# ==============================================================================
+FROM slim AS full
+
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" "emulator" && \
+        chmod -R 777 "${ANDROID_HOME}/emulator"; \
+    fi
+
+LABEL org.opencontainers.image.variant="full" \
+      org.opencontainers.image.description="Fast, optimized, multi-arch Android CI/CD build box (Full Batteries-Included Variant) with Android Emulator, GMD, Gradle 9.8.2, Android SDK 35/36/37, OpenJDK 17/21, Ruby 4.0.9, Fastlane 2.241.2, Python3, Bundletool & Universal Network Auto-Detection"
