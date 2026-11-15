@@ -22,3 +22,4 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0016](0016-multi-stage-image-variants-slim-vs-full.md) | Multi-Stage Image Variants (Slim vs Full) | Accepted | 2026-11-15 |
 | [ADR-0017](0017-enterprise-ci-cd-templates-and-components.md) | Pre-Packaged Enterprise CI/CD Templates and GitLab Component Architecture | Accepted | 2026-11-15 |
 | [ADR-0018](0018-arm64-instrumented-testing-and-cloud-device-farms.md) | ARM64 Instrumented Testing Strategy and Cloud Device Farm Delegation | Accepted | 2026-11-15 |
+| [ADR-0019](0019-cold-start-optimization-and-ecosystem-resilience.md) | Cold-Start Optimization, Ecosystem Hygiene and Modern Kotlin DSL Testing | Accepted | 2026-11-15 |
