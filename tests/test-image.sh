@@ -25,7 +25,10 @@ if [ "$DOCTOR_STATUS" != "healthy" ] || [ -z "$DOCTOR_JAVA_HOME" ] || [ "$DOCTOR
     echo -e "${RED}✘ Expected status 'healthy' with valid java_home but got status '${DOCTOR_STATUS}', java_home '${DOCTOR_JAVA_HOME}'!${RESET}"
     exit 1
 fi
-echo -e "${GREEN}✔ ci-doctor passed successfully (Interactive & JSON modes)!${RESET}\n"
+
+echo "Testing ci-doctor --kpi-check production pre-flight gate..."
+ci-doctor --kpi-check
+echo -e "${GREEN}✔ ci-doctor passed successfully (Interactive, JSON & KPI-Check modes)!${RESET}\n"
 
 # ------------------------------------------------------------------------------
 # Test 2: Dual JDK Switching (Direct execution & Sourcing)
@@ -443,6 +446,30 @@ START_WARM=$(date +%s)
 END_WARM=$(date +%s)
 WARM_DURATION=$((END_WARM - START_WARM))
 echo -e "${CYAN}⚡ Cached build completed in ${WARM_DURATION}s (Speedup: ${COLD_DURATION}s -> ${WARM_DURATION}s)${RESET}"
+
+# Performance regression assertions
+if [ "$COLD_DURATION" -gt 180 ]; then
+    echo -e "${RED}✘ Performance regression: cold-start build took ${COLD_DURATION}s (limit: 180s)!${RESET}"
+    exit 1
+fi
+if [ "$WARM_DURATION" -gt 35 ]; then
+    echo -e "${RED}✘ Performance regression: cached build took ${WARM_DURATION}s (limit: 35s)!${RESET}"
+    exit 1
+fi
+
+# Export structured benchmarks artifact for CI reporting
+APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || stat -f%z app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || echo 0)
+SPEEDUP_FACTOR=$(( COLD_DURATION / (WARM_DURATION > 0 ? WARM_DURATION : 1) ))
+
+mkdir -p /project/build 2>/dev/null || true
+cat <<EOF > /project/build/benchmarks.json
+{
+  "cold_start_seconds": $COLD_DURATION,
+  "warm_build_seconds": $WARM_DURATION,
+  "speedup_factor": "${SPEEDUP_FACTOR}x",
+  "apk_size_bytes": $APK_SIZE
+}
+EOF
 
 echo -e "${GREEN}✔ Kotlin DSL & Jetpack Compose compilation, unit tests and cache benchmarks passed!${RESET}\n"
 cd /project/test_projects/SampleProject

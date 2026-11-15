@@ -209,8 +209,53 @@ if [ -n "$REQ_CMAKE" ] && [ -d "${ANDROID_HOME:-/opt/android-sdk}/cmake/${REQ_CM
 fi
 
 # ------------------------------------------------------------------------------
-# 1. Gradle CI Performance Optimization Defaults
+# 1. Gradle CI Performance Optimization Defaults & Dynamic Cgroup Memory Tuning
 # ------------------------------------------------------------------------------
+detect_container_memory_mb() {
+    local mem_bytes=""
+    # 1. Cgroups v2: /sys/fs/cgroup/memory.max
+    if [ -f "/sys/fs/cgroup/memory.max" ]; then
+        local raw
+        raw=$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo "")
+        if [ "$raw" != "max" ] && [ -n "$raw" ] && [ "$raw" -gt 0 ] 2>/dev/null; then
+            mem_bytes="$raw"
+        fi
+    fi
+    # 2. Cgroups v1: /sys/fs/cgroup/memory/memory.limit_in_bytes
+    if [ -z "$mem_bytes" ] && [ -f "/sys/fs/cgroup/memory/memory.limit_in_bytes" ]; then
+        local raw
+        raw=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo "")
+        if [ -n "$raw" ] && [ "$raw" -lt 9223372036854770000 ] 2>/dev/null; then
+            mem_bytes="$raw"
+        fi
+    fi
+
+    local host_mem_kb
+    host_mem_kb=$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo "4194304")
+    local host_mem_bytes=$((host_mem_kb * 1024))
+
+    # If cgroup limit is unbounded or exceeds host RAM, fallback to host RAM
+    if [ -z "$mem_bytes" ] || [ "$mem_bytes" -gt "$host_mem_bytes" ] 2>/dev/null; then
+        mem_bytes="$host_mem_bytes"
+    fi
+
+    echo $((mem_bytes / 1024 / 1024))
+}
+
+if [ -z "${GRADLE_JVMARGS:-}" ]; then
+    CONTAINER_MEM_MB=$(detect_container_memory_mb)
+    # 70% of available container RAM
+    CALCULATED_HEAP_MB=$(( CONTAINER_MEM_MB * 70 / 100 ))
+    # Floor at 1536 MB, cap at 8192 MB (8GB)
+    if [ "$CALCULATED_HEAP_MB" -lt 1536 ]; then
+        CALCULATED_HEAP_MB=1536
+    elif [ "$CALCULATED_HEAP_MB" -gt 8192 ]; then
+        CALCULATED_HEAP_MB=8192
+    fi
+    GRADLE_JVMARGS="-Xmx${CALCULATED_HEAP_MB}m -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+TieredCompilation -Dfile.encoding=UTF-8"
+    echo "ℹ️  [cgroups] Container memory detected: ${CONTAINER_MEM_MB}MB -> Auto-allocated Gradle JVM heap: -Xmx${CALCULATED_HEAP_MB}m"
+fi
+
 GRADLE_PROP_FILE="$GRADLE_DIR/gradle.properties"
 
 if [ ! -f "$GRADLE_PROP_FILE" ]; then
@@ -222,7 +267,7 @@ org.gradle.daemon=false
 org.gradle.parallel=true
 org.gradle.caching=true
 org.gradle.vfs.watch=false
-org.gradle.jvmargs=${GRADLE_JVMARGS:--Xmx4g -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+TieredCompilation -Dfile.encoding=UTF-8}
+org.gradle.jvmargs=${GRADLE_JVMARGS}
 
 # Gradle Managed Devices (GMD) Headless & CI Automation
 android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
