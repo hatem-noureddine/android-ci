@@ -79,7 +79,9 @@ echo -e "${GREEN}✔ Android SDK components verified!${RESET}\n"
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}[Test 4/7] Verifying CLI tools (gradle, android, sdkmanager, emulator, bundletool, fastlane, python, gh)...${RESET}"
 gradle --version
-android --version
+if [ "$(dpkg --print-architecture)" = "amd64" ] && command -v android >/dev/null 2>&1; then
+    android --version
+fi
 sdkmanager --version
 if [ "$(dpkg --print-architecture)" = "amd64" ] && command -v emulator >/dev/null 2>&1; then
     (emulator -version 2>&1 || true) | head -n 2
