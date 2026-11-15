@@ -76,6 +76,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -201,6 +204,9 @@ jobs:
             echo "has_creds=false" >> "$GITHUB_OUTPUT"
             echo "::warning ::Docker Hub secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) are not configured."
           fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -328,6 +334,9 @@ jobs:
             echo "has_creds=false" >> "$GITHUB_OUTPUT"
             echo "::warning ::Docker Hub secrets (DOCKERHUB_USERNAME / DOCKERHUB_TOKEN) are not configured."
           fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
