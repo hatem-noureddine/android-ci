@@ -289,7 +289,7 @@ jobs:
           echo "Pulling native ${{ matrix.arch }} test image from GHCR..."
           IMAGE="ghcr.io/${{ github.repository }}:${VERSION}-slim-${{ matrix.arch }}"
           docker pull "$IMAGE"
-          echo "Executing test-image.sh natively on ${{ matrix.runner }} (${{ matrix.platform }})..."
+          echo "Executing test-image.sh natively on ${{ matrix.os }} (${{ matrix.platform }})..."
           docker run --rm \
             -v "$(pwd):/project" \
             -w /project \
