@@ -18,6 +18,9 @@ ARG GRADLE_VERSION="9.8.2"
 ARG RUBY_VERSION="4.0.9"
 ARG FASTLANE_VERSION="2.241.2"
 ARG BUNDLER_VERSION="4.0.23"
+ARG PIP_VERSION="25.0.1"
+ARG SETUPTOOLS_VERSION="75.8.0"
+ARG WHEEL_VERSION="0.45.1"
 ARG DEBIAN_FRONTEND="noninteractive"
 
 # Standard Environment Variables
@@ -94,7 +97,7 @@ RUN apt-get update -qq && \
     rm -rf /tmp/git-lfs /tmp/git-lfs.tar.gz && \
     mkdir -p /etc && \
     printf "[global]\nbreak-system-packages = true\n" > /etc/pip.conf && \
-    python3 -m pip install --no-cache-dir --ignore-installed pip setuptools wheel && \
+    python3 -m pip install --no-cache-dir --ignore-installed "pip==${PIP_VERSION}" "setuptools==${SETUPTOOLS_VERSION}" "wheel==${WHEEL_VERSION}" && \
     rm -rf /usr/lib/python3/dist-packages/pip* /usr/lib/python3/dist-packages/setuptools* /usr/lib/python3/dist-packages/wheel* && \
     locale-gen "${LANG}" && \
     update-locale LANG="${LANG}" LC_ALL="${LC_ALL}" && \
@@ -177,11 +180,11 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
         "build-tools;36.0.0" \
         "build-tools;37.0.0" && \
     ln -snf "${ANDROID_HOME}/platforms/android-37.0" "${ANDROID_HOME}/platforms/android-37" && \
-    rm -rf "${ANDROID_HOME}/cmdline-tools/latest/lib/external/lint-psi" && \
+    rm -rf "${ANDROID_HOME:?}/cmdline-tools/latest/lib/external/lint-psi" && \
     BC_VERSION="1.87" && \
     BC_DIR="${ANDROID_HOME}/cmdline-tools/latest/lib/external/org/bouncycastle" && \
     if [ -d "${BC_DIR}" ]; then \
-        rm -rf "${BC_DIR}/bcprov-jdk18on"/* "${BC_DIR}/bcpkix-jdk18on"/* && \
+        rm -rf "${BC_DIR:?}/bcprov-jdk18on"/* "${BC_DIR:?}/bcpkix-jdk18on"/* && \
         mkdir -p "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}" "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}" && \
         curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcprov-jdk18on/${BC_VERSION}/bcprov-jdk18on-${BC_VERSION}.jar" && \
         curl -fsSL "https://repo1.maven.org/maven2/org/bouncycastle/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" -o "${BC_DIR}/bcpkix-jdk18on/${BC_VERSION}/bcpkix-jdk18on-${BC_VERSION}.jar" && \
@@ -192,7 +195,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \
     GUAVA_VERSION="33.8.0-jre" && \
     GUAVA_DIR="${ANDROID_HOME}/cmdline-tools/latest/lib/external/com/google/guava/guava" && \
     if [ -d "${GUAVA_DIR}" ]; then \
-        rm -rf "${GUAVA_DIR}"/* && \
+        rm -rf "${GUAVA_DIR:?}"/* && \
         mkdir -p "${GUAVA_DIR}/${GUAVA_VERSION}" && \
         curl -fsSL "https://repo1.maven.org/maven2/com/google/guava/guava/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" -o "${GUAVA_DIR}/${GUAVA_VERSION}/guava-${GUAVA_VERSION}.jar" && \
         mkdir -p "${GUAVA_DIR}/33.4.0-jre" && \
