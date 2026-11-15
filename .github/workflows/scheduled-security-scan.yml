@@ -27,7 +27,7 @@ jobs:
         run: docker pull "hateum/android-ci-box:${{ matrix.image-variant }}"
 
       - name: Run Trivy Vulnerability Scanner (SARIF Report)
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "hateum/android-ci-box:${{ matrix.image-variant }}"
           format: sarif
@@ -43,7 +43,7 @@ jobs:
           category: "trivy-${{ matrix.image-variant }}"
 
       - name: Enforce Zero Unfixed Critical Vulnerabilities
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: "hateum/android-ci-box:${{ matrix.image-variant }}"
           format: table
