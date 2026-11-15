@@ -1,10 +1,37 @@
+# ==============================================================================
+# GitHub Dependabot Configuration
+# Automatically monitors and opens PRs for GitHub Actions and Docker base images
+# ==============================================================================
 version: 2
 updates:
+  # Monitor all GitHub Actions referenced across .github/workflows/
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "Etc/UTC"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "security"
+      - "github-actions"
+    commit-message:
+      prefix: "ci(deps)"
+      include: "scope"
+
+  # Monitor Docker base images referenced in Dockerfile
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+      include: "scope"
