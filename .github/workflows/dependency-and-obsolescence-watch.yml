@@ -73,6 +73,7 @@ jobs:
       - name: Create Automated Update Pull Request
         if: steps.watchdog.outputs.any_update == 'true'
         uses: peter-evans/create-pull-request@v8
+        continue-on-error: true
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore(deps): update upstream tools and dependencies"
