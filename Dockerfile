@@ -7,7 +7,7 @@
 #           ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
 
-FROM ubuntu:24.04 AS slim
+FROM ubuntu:25.10 AS slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
