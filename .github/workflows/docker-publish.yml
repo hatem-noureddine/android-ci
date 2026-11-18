@@ -39,6 +39,8 @@ jobs:
           scandir: '.'
           ignore_paths: >-
             test_projects
+            bin/ci-lane-summary
+            scripts
 
       - name: Run Actionlint (GitHub Workflows Linter)
         uses: raven-actions/actionlint@v2

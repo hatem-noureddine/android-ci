@@ -139,12 +139,27 @@ elif [ -f "Fastfile" ]; then
     PROJECT_FASTFILE="Fastfile"
 fi
 
+# Locate summary reporter helper
+SUMMARY_BIN=""
+if [ -x "/usr/local/bin/ci-lane-summary" ]; then
+    SUMMARY_BIN="/usr/local/bin/ci-lane-summary"
+elif [ -x "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ci-lane-summary" ]; then
+    SUMMARY_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ci-lane-summary"
+fi
+
+LOG_FILE="/tmp/ci-lane-${LANE_NAME}-$$.log"
+SECONDS=0
+
+# Run fastlane command with output streaming + capture
+set +e
 if [ -n "$PROJECT_FASTFILE" ]; then
     echo -e "${BLUE}ℹ [ci-lane] Detected project Fastfile at ${PROJECT_FASTFILE}.${RESET}"
     if [ -f "Gemfile" ] && command -v bundle >/dev/null 2>&1; then
-        exec bundle exec fastlane "$LANE_NAME" "$@"
+        bundle exec fastlane "$LANE_NAME" "$@" 2>&1 | tee "$LOG_FILE"
+        EXIT_CODE=${PIPESTATUS[0]}
     else
-        exec fastlane "$LANE_NAME" "$@"
+        fastlane "$LANE_NAME" "$@" 2>&1 | tee "$LOG_FILE"
+        EXIT_CODE=${PIPESTATUS[0]}
     fi
 else
     # Fall back to built-in universal Fastfile
@@ -160,5 +175,36 @@ else
 
     echo -e "${CYAN}⚡ [ci-lane] Executing built-in turnkey lane '${LANE_NAME}' from ${RESOLVED_BUILTIN}...${RESET}"
     export FASTLANE_FASTFILE="$RESOLVED_BUILTIN"
-    exec fastlane "$LANE_NAME" "$@"
+    fastlane "$LANE_NAME" "$@" 2>&1 | tee "$LOG_FILE"
+    EXIT_CODE=${PIPESTATUS[0]}
 fi
+set -e
+
+DURATION=$SECONDS
+STATUS="success"
+if [ "$EXIT_CODE" -ne 0 ]; then
+    STATUS="failure"
+fi
+
+# Dispatch post-lane summary reporting if enabled
+if [ "${CI_LANE_SUMMARY:-true}" != "false" ] && [ -n "$SUMMARY_BIN" ]; then
+    "$SUMMARY_BIN" \
+        --lane "$LANE_NAME" \
+        --status "$STATUS" \
+        --duration "$DURATION" \
+        --exit-code "$EXIT_CODE" \
+        --log-file "$LOG_FILE" || true
+fi
+
+# Clean up log file
+rm -f "$LOG_FILE" 2>/dev/null || true
+
+# Propagate exit code unless explicitly silenced
+if [ "$EXIT_CODE" -ne 0 ]; then
+    if [ "${CI_LANE_FAIL_SILENT:-false}" = "true" ]; then
+        echo -e "${BLUE}ℹ [ci-lane] Failure silenced by CI_LANE_FAIL_SILENT=true.${RESET}"
+        exit 0
+    fi
+    exit "$EXIT_CODE"
+fi
+exit 0

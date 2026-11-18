@@ -163,8 +163,9 @@ COPY bin/install-ndk-version /usr/local/bin/install-ndk-version
 COPY bin/detect-android-project /usr/local/bin/detect-android-project
 COPY bin/run-firebase-testlab /usr/local/bin/run-firebase-testlab
 COPY bin/ci-lane /usr/local/bin/ci-lane
+COPY bin/ci-lane-summary /usr/local/bin/ci-lane-summary
 COPY fastlane/Fastfile.builtin /opt/fastlane/Fastfile
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project /usr/local/bin/run-firebase-testlab /usr/local/bin/ci-lane && \
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project /usr/local/bin/run-firebase-testlab /usr/local/bin/ci-lane /usr/local/bin/ci-lane-summary && \
     chmod -R 777 /opt/fastlane
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)

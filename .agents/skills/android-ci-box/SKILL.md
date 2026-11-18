@@ -1,11 +1,12 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.7.1
+version: 1.7.2
 triggers:
   - "build android"
   - "run android tests"
   - "ci-lane"
+  - "ci summary"
   - "turnkey fastlane"
   - "badge android icon"
   - "distribute firebase"
@@ -33,8 +34,8 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 ## 1. Container Specifications & Runtime Context
 
 - **Docker Images**:
-  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.1`): Full batteries-included image with Android Emulator & GMD.
-  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.1-slim`): Ultra-fast compilation and linting image (~35% smaller).
+  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.2`): Full batteries-included image with Android Emulator & GMD.
+  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.2-slim`): Ultra-fast compilation and linting image (~35% smaller).
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -279,6 +280,13 @@ ci-lane release              # sign + bundle + distribute (Play Store + Firebase
 ```
 
 *Note: If the current workspace contains its own `fastlane/Fastfile` or `Fastfile`, `ci-lane` automatically delegates to your custom Fastfile instead.*
+
+#### Universal CI Summary & Sticky PR Comments:
+`ci-lane` automatically generates an executive Markdown summary after every lane run:
+- **GitHub Actions**: Injected into `$GITHUB_STEP_SUMMARY` and posted as a sticky PR comment (`<!-- ci-lane-summary -->`).
+- **GitLab CI**: Written to `ci-lane-summary.md` and `build/reports/ci-lane-summary.md`. Posted to Merge Request notes via API.
+- **Controls**: `CI_LANE_SUMMARY=true/false` (default: `true`), `CI_LANE_COMMENT_PR=true/false` (default: `true`), `CI_LANE_FAIL_SILENT=true/false` (default: `false`).
+- Standalone CLI: `ci-lane-summary --lane <name> --status <success|failure> --duration <sec> --exit-code <code>`.
 
 #### Bundletool Workflows:
 ```bash

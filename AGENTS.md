@@ -43,7 +43,7 @@ Before pushing any commit, you **MUST** verify that all static analysis tools re
 
 ```bash
 # 1. ShellCheck (all shell scripts must pass with 0 warnings)
-shellcheck bin/* ci-doctor entrypoint.sh tests/test-image.sh
+shellcheck bin/switch-jdk bin/install-sdk-version bin/install-ndk-version bin/detect-android-project bin/run-firebase-testlab bin/ci-lane ci-doctor entrypoint.sh tests/test-image.sh
 
 # 2. Hadolint (Dockerfile linter)
 docker run --rm -i hadolint/hadolint:latest hadolint --ignore DL3008 --ignore DL3028 - < Dockerfile
@@ -71,6 +71,7 @@ The image provides specialized CLI utilities that you should leverage when autom
 | `bundletool` | `/usr/local/bin/bundletool` | Standalone wrapper for Google's Bundletool 1.18.3. |
 | `run-firebase-testlab` | `/usr/local/bin/run-firebase-testlab` | Dispatches instrumented UI tests to Google Firebase Test Lab (essential for ARM64 runners). |
 | `ci-lane` | `/usr/local/bin/ci-lane [lane]` | Turnkey universal Fastlane runner with built-in quality, badging, build, and store lanes. |
+| `ci-lane-summary` | `/usr/local/bin/ci-lane-summary` | Universal CI summary reporter for GitHub Actions, GitLab CI, Bitrise and PR sticky comments. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | Official Google Android CLI (modern replacement for sdkmanager/avdmanager). |
 
 ---
