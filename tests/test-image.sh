@@ -135,6 +135,15 @@ else
     exit 1
 fi
 
+# Verify ci-lane CLI usage
+echo "Verifying ci-lane CLI interface..."
+if ci-lane list 2>&1 | grep -q "Available Turnkey Built-in Lanes"; then
+    echo -e "${GREEN}✔ ci-lane CLI interface and built-in lanes verified!${RESET}"
+else
+    echo -e "${RED}✘ ci-lane CLI failed list check!${RESET}"
+    exit 1
+fi
+
 # Verify Gradle CI Optimizations init-script
 echo "Verifying Gradle CI Optimizations init-script..."
 if [ -f /opt/gradle/init.d/ci-optimizations.gradle ]; then
@@ -475,12 +484,14 @@ echo -e "${GREEN}✔ Kotlin DSL & Jetpack Compose compilation, unit tests and ca
 cd /project/test_projects/SampleProject
 
 # ------------------------------------------------------------------------------
-# Test 7: Fastlane Test Lane Execution
+# Test 7: Fastlane & ci-lane Execution
 # ------------------------------------------------------------------------------
-echo -e "${BOLD}[Test 7/7] Executing Fastlane test lanes...${RESET}"
+echo -e "${BOLD}[Test 7/7] Executing Fastlane and turnkey ci-lane test lanes...${RESET}"
 bundle exec fastlane android test_ci
 bundle exec fastlane test
-echo -e "${GREEN}✔ Fastlane test lanes executed successfully!${RESET}\n"
+echo "Verifying turnkey ci-lane execution on project..."
+ci-lane test
+echo -e "${GREEN}✔ Fastlane and turnkey ci-lane test lanes executed successfully!${RESET}\n"
 
 echo -e "\n${BOLD}${GREEN}================================================================${RESET}"
 echo -e "${BOLD}${GREEN}   ✔ ALL 7 TESTS PASSED SUCCESSFULLY! THE IMAGE IS CERTIFIED.   ${RESET}"

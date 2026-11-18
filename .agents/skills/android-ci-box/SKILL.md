@@ -1,10 +1,15 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.6.4
+version: 1.7.0
 triggers:
   - "build android"
   - "run android tests"
+  - "ci-lane"
+  - "turnkey fastlane"
+  - "badge android icon"
+  - "distribute firebase"
+  - "distribute playstore"
   - "switch jdk"
   - "install android sdk"
   - "gradle managed devices"
@@ -28,8 +33,8 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 ## 1. Container Specifications & Runtime Context
 
 - **Docker Images**:
-  - `hateum/android-ci-box:latest` (or SemVer tag `1.6.4`): Full batteries-included image with Android Emulator & GMD.
-  - `hateum/android-ci-box:slim` (or SemVer tag `1.6.4-slim`): Ultra-fast compilation and linting image (~35% smaller).
+  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.0`): Full batteries-included image with Android Emulator & GMD.
+  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.0-slim`): Ultra-fast compilation and linting image (~35% smaller).
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -214,12 +219,53 @@ android {
 
 ---
 
-### Step 7: Fastlane & Bundletool Workflows
+### Step 7: Fastlane & Turnkey `ci-lane` Workflows
+
+Starting with **v1.7.0**, you do not need to configure a `Fastfile` in your repository. The image ships with built-in universal lanes orchestrated by the `ci-lane` CLI utility:
 
 ```bash
-# Run Fastlane test lane
-fastlane test
+# List all available built-in lanes:
+ci-lane list
 
+# Run quality checks:
+ci-lane test               # Run unit tests and extract reports
+ci-lane lint               # Run Android Lint (HTML/SARIF)
+ci-lane detekt             # Run Detekt static analysis
+ci-lane sonar              # Run SonarQube analysis (requires SONAR_TOKEN)
+
+# Build & Package:
+ci-lane build_debug        # Assemble debug APK
+ci-lane build_release      # Assemble release APK
+ci-lane bundle             # Build release Android App Bundle (.aab)
+
+# Dynamic Icon Badging:
+ci-lane badge              # Overlays QA/BETA ribbon on launcher icons
+# Environment variables:
+# BADGE_TEXT="QA-42", BADGE_COLOR="#e74c3c", BADGE_GRAVITY="bottom", BADGE_SHIELD="v1.7.0"
+
+# Code Signing:
+ci-lane sign               # Decodes base64 keystore and sets signing properties
+# Environment variables:
+# KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+
+# Stores & App Distribution:
+ci-lane distribute_firebase  # Deploys to Firebase App Distribution
+ci-lane distribute_playstore # Uploads AAB to Google Play Store (track: internal/alpha/beta/production)
+ci-lane distribute_github    # Attaches release APKs/AABs to GitHub Release
+
+# Multi-channel ChatOps:
+ci-lane notify_slack         # Posts deployment status card to Slack (SLACK_WEBHOOK_URL)
+ci-lane notify_teams         # Posts deployment status card to MS Teams (TEAMS_WEBHOOK_URL)
+ci-lane notify               # Multi-channel broadcast to all configured webhooks
+
+# Complete End-to-End Pipeline:
+ci-lane all                  # Clean -> Lint -> Test -> Badge -> Build -> Distribute -> Notify
+```
+
+*Note: If the current workspace contains its own `fastlane/Fastfile` or `Fastfile`, `ci-lane` automatically delegates to your custom Fastfile instead.*
+
+#### Bundletool Workflows:
+```bash
 # Convert .aab to universal APK using bundletool
 bundletool build-apks \
   --bundle=app/build/outputs/bundle/release/app-release.aab \

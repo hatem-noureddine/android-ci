@@ -73,6 +73,7 @@ RUN apt-get update -qq && \
         pkg-config \
         python3 \
         python3-pip \
+        python3-pil \
         python3-venv \
         python3-dev \
         tzdata \
@@ -155,13 +156,16 @@ ENV JAVA_HOME="/opt/default-jdk"
 ENV ANDROID_AVD_HOME="/home/runner/.android/avd"
 ENV PATH="${RBENV_ROOT}/shims:${RBENV_ROOT}/bin:${GRADLE_HOME}/bin:${JAVA_HOME}/bin:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
 
-# Layer 5: Helper scripts
+# Layer 5: Helper scripts & Turnkey Fastlane Lanes
 COPY bin/switch-jdk /usr/local/bin/switch-jdk
 COPY bin/install-sdk-version /usr/local/bin/install-sdk-version
 COPY bin/install-ndk-version /usr/local/bin/install-ndk-version
 COPY bin/detect-android-project /usr/local/bin/detect-android-project
 COPY bin/run-firebase-testlab /usr/local/bin/run-firebase-testlab
-RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project /usr/local/bin/run-firebase-testlab
+COPY bin/ci-lane /usr/local/bin/ci-lane
+COPY fastlane/Fastfile.builtin /opt/fastlane/Fastfile
+RUN chmod +x /usr/local/bin/switch-jdk /usr/local/bin/install-sdk-version /usr/local/bin/install-ndk-version /usr/local/bin/detect-android-project /usr/local/bin/run-firebase-testlab /usr/local/bin/ci-lane && \
+    chmod -R 777 /opt/fastlane
 
 # Layer 6: Install Android Command-Line Tools & SDK components (API 35, 36, 37.0 + emulator + build-tools)
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" "${ANDROID_HOME}/licenses" && \

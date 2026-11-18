@@ -111,17 +111,18 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-sky-400 transition-colors">Android CI Box</span>
-          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.6.4</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.7.0</span>
         </div>
       </a>
 
       <!-- Desktop Nav -->
       <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
         <a href="#features" class="hover:text-sky-400 transition-colors">Features</a>
+        <a href="#ci-lane" class="hover:text-amber-300 transition-colors font-semibold">⚡ ci-lane</a>
         <a href="#architecture" class="hover:text-sky-400 transition-colors">Architecture</a>
         <a href="#ci-recipes" class="hover:text-sky-400 transition-colors">CI Pipelines</a>
         <a href="#ai-agents" class="hover:text-sky-400 transition-colors">AI Agents</a>
-        <a href="#diagnostics" class="hover:text-sky-400 transition-colors">Diagnostics</a>
+        <a href="#consulting" class="hover:text-emerald-400 transition-colors font-semibold">💼 Consulting</a>
       </nav>
 
       <!-- External Links -->
@@ -814,6 +815,235 @@ flowchart LR
             </div>
           </div>
         </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- Turnkey CI Lanes (ci-lane) Showcase                                          -->
+  <!-- ============================================================================ -->
+  <section id="ci-lane" class="py-24 border-t border-slate-800 bg-slate-900/40 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-4">
+          ⚡ Turnkey Mobile DevOps
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
+          Turnkey Android CI/CD in 1 Single Line (<code class="text-amber-400 font-mono">ci-lane</code>)
+        </h2>
+        <p class="text-slate-400 text-lg">
+          Zero Fastfile to maintain. Zero Ruby setup. The container embeds an autonomous Fastfile router that handles your complete build, badge, signing, and store deployment out of the box.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-2xl">
+            🧪
+          </div>
+          <h3 class="text-xl font-bold text-white">Quality & Static Analysis</h3>
+          <p class="text-sm text-slate-400">
+            Automated JUnit unit tests, Android Lint, Detekt Kotlin code smells analysis, SonarQube/Cloud, and Paparazzi/Roborazzi screenshot tests.
+          </p>
+          <div class="p-3 bg-slate-950 rounded-lg font-mono text-xs text-sky-400">
+            ci-lane test<br>
+            ci-lane lint<br>
+            ci-lane detekt
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl">
+            🏷️
+          </div>
+          <h3 class="text-xl font-bold text-white">Branding & Dynamic Badging</h3>
+          <p class="text-sm text-slate-400">
+            Overlay customized ribbons ("BETA", "QA", "STAGING", commit SHA) and shields on launcher icons so testers instantly recognize pre-release builds.
+          </p>
+          <div class="p-3 bg-slate-950 rounded-lg font-mono text-xs text-amber-400">
+            BADGE_TEXT="QA" ci-lane badge<br>
+            ci-lane build_debug<br>
+            ci-lane bundle
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl">
+            🚀
+          </div>
+          <h3 class="text-xl font-bold text-white">Stores & ChatOps Alerting</h3>
+          <p class="text-sm text-slate-400">
+            Base64 Keystore auto-decoding and signing. Push artifacts directly to Firebase App Distribution, Google Play Console, and send Slack/Teams/Discord alerts.
+          </p>
+          <div class="p-3 bg-slate-950 rounded-lg font-mono text-xs text-emerald-400">
+            ci-lane sign<br>
+            ci-lane distribute_firebase<br>
+            ci-lane distribute_playstore
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center">
+        <p class="text-slate-300 font-medium mb-3">Want to run the complete production pipeline in a single command?</p>
+        <code class="px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-mono font-bold text-sm inline-block">
+          ci-lane all
+        </code>
+        <p class="text-slate-500 text-xs mt-3">Sequentially runs lint ➔ detekt ➔ unit tests ➔ release assemble ➔ release bundle (.aab).</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================================ -->
+  <!-- B2B Consulting & Services Section (Senior Android Engineer)                   -->
+  <!-- ============================================================================ -->
+  <section id="consulting" class="py-24 border-t border-slate-800 bg-slate-950 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-4">
+          💼 Senior Android Engineer & Mobile Release Specialist
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-4">
+          Tailored Android CI/CD & Mobile Release Services
+        </h2>
+        <p class="text-slate-400 text-lg">
+          Built by an Android developer for Android developers. Stop fighting generic DevOps pipelines that don't understand AGP, Gradle daemons, or Keystores. Get battle-tested mobile automation tailored to your app.
+        </p>
+      </div>
+
+      <!-- Services Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        
+        <div class="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-emerald-500/40 transition space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl">
+            🚀
+          </div>
+          <h3 class="text-xl font-bold text-white">Turnkey Android CI/CD Pipeline Setup</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Complete implementation or modernization of your mobile pipelines on <strong>GitHub Actions, GitLab CI, or Bitrise</strong>. Rootless execution, multi-stage builds, and zero infrastructure overhead for your mobile team.
+          </p>
+          <ul class="text-xs text-slate-400 space-y-1.5">
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Automated unit tests, linting and APK/AAB builds</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Universal caching strategy (Gradle build cache & wrapper)</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Turnkey ci-lane integration for 1-line maintenance</li>
+          </ul>
+        </div>
+
+        <div class="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-sky-500/40 transition space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-2xl">
+            ⚡
+          </div>
+          <h3 class="text-xl font-bold text-white">Gradle Build Speedup & OOMKill Audit</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            In-depth audit of slow Android builds. We eliminate silent <strong>Exit Code 137 OOMKills</strong> with cgroups auto-tuning and accelerate cold and incremental build cycles by <strong>3x to 5x</strong>.
+          </p>
+          <ul class="text-xs text-slate-400 space-y-1.5">
+            <li class="flex items-center gap-2"><span class="text-sky-400">✓</span> Cgroups v1/v2 JVM memory auto-tuning</li>
+            <li class="flex items-center gap-2"><span class="text-sky-400">✓</span> Configuration Cache and Build Cache profiling</li>
+            <li class="flex items-center gap-2"><span class="text-sky-400">✓</span> Measurable before/after performance KPI report</li>
+          </ul>
+        </div>
+
+        <div class="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 transition space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl">
+            📦
+          </div>
+          <h3 class="text-xl font-bold text-white">Store Release Automation & Fastlane</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Eliminate stressful manual Friday releases. Complete automation of <strong>Keystore signing, QA/Beta icon badging, Firebase App Distribution</strong>, and Google Play Console phased rollout tracks.
+          </p>
+          <ul class="text-xs text-slate-400 space-y-1.5">
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Secure Base64 Keystore decoding without secret leaks</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Automated launcher icon badging for QA builds</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">✓</span> Slack / Teams / Discord ChatOps release alerts</li>
+          </ul>
+        </div>
+
+        <div class="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-purple-500/40 transition space-y-4">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-2xl">
+            🔄
+          </div>
+          <h3 class="text-xl font-bold text-white">AGP 9 & Modern Android Stack Migration</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Direct engineering guidance to migrate legacy build configurations to modern Google standards: <strong>AGP 9.x, Gradle 9, Kotlin DSL (.kts), Version Catalogs (`libs.versions.toml`)</strong>, and Compose compiler.
+          </p>
+          <ul class="text-xs text-slate-400 space-y-1.5">
+            <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Groovy to Kotlin DSL script modernization</li>
+            <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Centralized Version Catalog refactoring</li>
+            <li class="flex items-center gap-2"><span class="text-purple-400">✓</span> Deprecated API remediation and AAPT2 compatibility</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Secure Interactive Contact Form (Formspree) -->
+      <div id="contact" class="max-w-2xl mx-auto p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="text-center mb-8">
+          <h3 class="text-2xl font-bold text-white mb-2">Request an Android CI/CD Audit or Consultation</h3>
+          <p class="text-sm text-slate-400">
+            Tell me about your mobile team's current setup. I'll get back to you with actionable insights and availability.
+          </p>
+        </div>
+
+        <form action="https://formspree.io/f/mqaeapzy" method="POST" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="name" class="block text-xs font-semibold text-slate-300 mb-1.5">Your Name</label>
+              <input type="text" id="name" name="name" required placeholder="Alex Dupont" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500 transition">
+            </div>
+            <div>
+              <label for="email" class="block text-xs font-semibold text-slate-300 mb-1.5">Work Email</label>
+              <input type="email" id="email" name="email" required placeholder="alex@company.com" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500 transition">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="company" class="block text-xs font-semibold text-slate-300 mb-1.5">Company / App Name</label>
+              <input type="text" id="company" name="company" placeholder="Acme Inc." class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500 transition">
+            </div>
+            <div>
+              <label for="service" class="block text-xs font-semibold text-slate-300 mb-1.5">Primary Need</label>
+              <select id="service" name="service" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-emerald-500 transition">
+                <option value="pipeline-setup">Turnkey CI/CD Setup (GitLab / GitHub / Bitrise)</option>
+                <option value="build-speedup">Gradle Build Speedup & OOMKill Audit</option>
+                <option value="release-automation">Fastlane & Store Release Automation</option>
+                <option value="agp-migration">AGP 9 / Gradle 9 / KTS Migration</option>
+                <option value="other">Custom Mobile Consulting</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="message" class="block text-xs font-semibold text-slate-300 mb-1.5">Message / Current Bottlenecks</label>
+            <textarea id="message" name="message" rows="4" required placeholder="Describe your current CI platform, build duration, or migration goals..." class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-emerald-500 transition"></textarea>
+          </div>
+
+          <button type="submit" class="w-full py-3 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition transform hover:-translate-y-0.5">
+            📩 Send Inquiry via Secure Form
+          </button>
+          
+          <p class="text-center text-xs text-slate-500">
+            🔒 Secure submission via Formspree. Direct confidential response within 24h.
+          </p>
+        </form>
+      </div>
+
+      <!-- GitHub Sponsors Box -->
+      <div class="mt-12 max-w-xl mx-auto p-6 rounded-2xl bg-slate-900/40 border border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div>
+          <h4 class="text-white font-bold text-sm">Support Open-Source Android Tooling</h4>
+          <p class="text-xs text-slate-400">Back this project on GitHub Sponsors to help maintain multi-arch CI parity.</p>
+        </div>
+        <a href="https://github.com/sponsors/hatem-noureddine" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30 transition">
+          <svg class="w-4 h-4 text-pink-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          Sponsor on GitHub
+        </a>
       </div>
 
     </div>
