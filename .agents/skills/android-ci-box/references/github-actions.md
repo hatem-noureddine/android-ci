@@ -61,3 +61,35 @@ Use `actions/cache@v4` targeting `~/.gradle/caches` and `~/.gradle/wrapper`:
 ## 3. Ready-to-Use Template
 
 A complete production workflow is available at [`examples/ci/github-actions.yml`](../../../examples/ci/github-actions.yml).
+
+---
+
+## 4. Turnkey Mobile CI/CD with `ci-lane`
+
+Starting with **v1.7.2**, you can run complete Android CI/CD pipelines without configuring a `Fastfile`:
+
+```yaml
+name: Android Turnkey CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:slim
+    permissions:
+      contents: read
+      pull-requests: write # Enables automatic sticky PR comment
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Quality Gate & Tests
+        run: |
+          ci-lane lint
+          ci-lane test
+          ci-lane code_coverage
+        env:
+          COVERAGE_THRESHOLD: "80"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+See the full guide in [`docs/ci-lane.md`](../../../docs/ci-lane.md).
