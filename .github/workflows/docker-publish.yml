@@ -484,7 +484,7 @@ jobs:
             "ghcr.io/${{ github.repository }}:${VERSION}-slim-arm64"
 
       - name: Install Cosign (Sigstore Cryptographic Signer)
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@v4.1.3
 
       - name: Install Syft (SBOM Generator)
         uses: anchore/sbom-action/download-syft@v0
