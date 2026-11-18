@@ -66,6 +66,11 @@ ${CYAN}🧪 QUALITY & TESTS:${RESET}
   ${GREEN}detekt${RESET}               Run Detekt Kotlin code smell analysis
   ${GREEN}sonar${RESET}                Run SonarQube / SonarCloud (requires SONAR_TOKEN)
   ${GREEN}screenshot_tests${RESET}     Run Roborazzi or Paparazzi verification tasks
+  ${GREEN}code_coverage${RESET}        Run Jacoco and enforce minimum coverage threshold
+                       Vars: COVERAGE_THRESHOLD (default: 80)
+  ${GREEN}security_scan${RESET}        Analyze APK permissions and certificate expiry via apkanalyzer
+  ${GREEN}perf_baseline${RESET}        Run Jetpack Macrobenchmark and extract metrics to JSON
+                       Vars: BENCHMARK_MODULE, BENCHMARK_CLASS, BENCHMARK_OUTPUT
 
 ${CYAN}📦 PACKAGING & BRANDING:${RESET}
   ${GREEN}build_debug${RESET}          Assemble Debug APK
@@ -73,6 +78,8 @@ ${CYAN}📦 PACKAGING & BRANDING:${RESET}
   ${GREEN}bundle${RESET}               Assemble Release Android App Bundle (.aab)
   ${GREEN}badge${RESET}                Overlay badge on launcher icons
                        Vars: BADGE_TEXT (default: 'BETA'), BADGE_COLOR, BADGE_GRAVITY
+  ${GREEN}apk_size_audit${RESET}       Warn on APK/AAB size regressions vs a configurable baseline
+                       Vars: APK_SIZE_BASELINE_MB, APK_SIZE_WARN_THRESHOLD_PCT (default: 10)
 
 ${CYAN}🔐 SIGNATURE & DISTRIBUTION:${RESET}
   ${GREEN}sign${RESET}                 Sign APK or AAB
@@ -80,8 +87,23 @@ ${CYAN}🔐 SIGNATURE & DISTRIBUTION:${RESET}
   ${GREEN}distribute_firebase${RESET}  Deploy to Firebase App Distribution
                        Vars: FIREBASE_APP_ID, FIREBASE_TOKEN, FIREBASE_GROUPS
   ${GREEN}distribute_playstore${RESET} Deploy to Google Play Console
-                       Vars: GOOGLE_PLAY_KEY_BASE64 or SUPPLY_JSON_KEY, PLAY_TRACK
-  ${GREEN}distribute_github${RESET}   Upload APK/AAB to GitHub Releases via gh CLI
+                       Vars: GOOGLE_PLAY_KEY_BASE64 or SUPPLY_JSON_KEY, PLAY_TRACK, PLAY_ROLLOUT_PERCENTAGE
+  ${GREEN}deploy_alpha${RESET}         Google Play internal track shortcut (PLAY_TRACK=internal)
+  ${GREEN}deploy_production${RESET}    Google Play production shortcut
+                       Vars: PLAY_ROLLOUT_PERCENTAGE (default: 10%)
+  ${GREEN}distribute_github${RESET}    Upload APK/AAB to GitHub Releases via gh CLI
+  ${GREEN}app_center${RESET}           Distribute to Microsoft App Center
+                       Vars: APPCENTER_API_TOKEN, APPCENTER_OWNER_NAME, APPCENTER_APP_NAME
+  ${GREEN}deploy_huawei${RESET}        Publish to Huawei AppGallery Connect
+                       Vars: HUAWEI_CLIENT_ID, HUAWEI_CLIENT_SECRET, HUAWEI_APP_ID
+  ${GREEN}deploy_samsung${RESET}       Publish to Samsung Galaxy Store
+                       Vars: SAMSUNG_SERVICE_ACCOUNT, SAMSUNG_ACCESS_KEY, SAMSUNG_CONTENT_ID
+
+${CYAN}🏷️  VERSION CONTROL:${RESET}
+  ${GREEN}changelog${RESET}            Generate CHANGELOG.md from Conventional Commits
+                       Vars: CHANGELOG_FILE (default: CHANGELOG.md)
+  ${GREEN}git_tag${RESET}              Create and push Git tag vX.Y.Z from app versionName
+                       Vars: GIT_TAG_NAME (optional override)
 
 ${CYAN}💬 CHATOPS & NOTIFICATIONS:${RESET}
   ${GREEN}notify_slack${RESET}         Send Slack card (requires SLACK_WEBHOOK_URL)
@@ -90,6 +112,7 @@ ${CYAN}💬 CHATOPS & NOTIFICATIONS:${RESET}
 
 ${CYAN}🚀 COMPOSITE PIPELINES:${RESET}
   ${GREEN}all${RESET}                  Complete pipeline (lint + detekt + test + build_release + bundle)
+  ${GREEN}release${RESET}              Full release (sign + bundle + stores + git_tag + changelog + notify)
   ${GREEN}clean${RESET}                Clean Gradle build caches and daemons
 EOF
 }

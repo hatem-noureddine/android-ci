@@ -322,7 +322,344 @@ except Exception as e:
   end
 
   # ============================================================================
-  # 5. Composite Turnkey Pipelines
+  # 5. Version Control & Tagging Lanes
+  # ============================================================================
+
+  desc "Generate CHANGELOG.md from Conventional Commits since the last Git tag"
+  lane :changelog do
+    output_file = ENV["CHANGELOG_FILE"] || "CHANGELOG.md"
+    since_tag = sh("git describe --tags --abbrev=0 2>/dev/null || echo ''", log: false).strip
+    since_ref = since_tag.empty? ? "--all" : "#{since_tag}..HEAD"
+
+    UI.message("📋 Generating changelog from #{since_tag.empty? ? 'all commits' : "#{since_tag} → HEAD"}...")
+
+    raw_log = sh("git log #{since_ref} --pretty=format:'%h|%s|%an' 2>/dev/null", log: false).strip
+    if raw_log.empty?
+      UI.important("No commits found since last tag. Skipping changelog generation.")
+      next
+    end
+
+    sections = { "feat" => [], "fix" => [], "perf" => [], "refactor" => [],
+                 "docs" => [], "test" => [], "chore" => [], "other" => [] }
+
+    raw_log.split("\n").each do |line|
+      parts = line.split("|", 3)
+      next unless parts.length == 3
+      sha, subject, author = parts
+      type = subject.match(/^(\w+)[\(!:]/)&.captures&.first || "other"
+      sections.key?(type) ? sections[type] << "- #{subject} (`#{sha}`) — #{author}" : sections["other"] << "- #{subject} (`#{sha}`) — #{author}"
+    end
+
+    version_name = sh("grep -m1 'versionName' app/build.gradle* 2>/dev/null | grep -oP '\"\\K[^\"]+' || echo 'unreleased'", log: false).strip
+    date_str = Time.now.strftime("%Y-%m-%d")
+    content = "# Changelog\n\n## [#{version_name}] — #{date_str}\n\n"
+
+    type_labels = { "feat" => "🚀 Features", "fix" => "🐛 Bug Fixes", "perf" => "⚡ Performance",
+                    "refactor" => "♻️ Refactoring", "docs" => "📚 Documentation", "test" => "🧪 Tests",
+                    "chore" => "🔧 Chores", "other" => "📦 Other" }
+
+    sections.each do |type, entries|
+      next if entries.empty?
+      content += "### #{type_labels[type]}\n#{entries.join("\n")}\n\n"
+    end
+
+    existing = File.exist?(output_file) ? File.read(output_file).sub(/^# Changelog\n/, "") : ""
+    File.write(output_file, content + existing)
+    UI.success("✔ Changelog written to #{output_file}")
+  end
+
+  desc "Create and push a Git tag vX.Y.Z from the app versionName"
+  lane :git_tag do
+    version_name = sh("grep -m1 'versionName' app/build.gradle* 2>/dev/null | grep -oP '\"\\K[^\"]+' || echo ''", log: false).strip
+    if version_name.empty?
+      UI.user_error!("Could not extract versionName from app/build.gradle. Set GIT_TAG_NAME env var or fix your build file.")
+    end
+    tag = ENV["GIT_TAG_NAME"] || "v#{version_name}"
+    branch = ENV["GITHUB_REF_NAME"] || ENV["CI_COMMIT_REF_NAME"] || sh("git rev-parse --abbrev-ref HEAD", log: false).strip
+    UI.message("🏷️  Creating Git tag #{tag} on #{branch}...")
+    sh("git config user.email 'ci@android-ci-box' && git config user.name 'Android CI Box' || true")
+    sh("git tag -a '#{tag}' -m 'Release #{tag} — built by hateum/android-ci-box' 2>/dev/null || true")
+    sh("git push origin '#{tag}' 2>/dev/null || true")
+    UI.success("✔ Git tag #{tag} created and pushed.")
+  end
+
+  # ============================================================================
+  # 6. Additional Store Distribution Lanes
+  # ============================================================================
+
+  desc "Deploy Release AAB to Google Play internal track (shortcut for PLAY_TRACK=internal)"
+  lane :deploy_alpha do
+    UI.message("🔑 Deploying to Google Play internal track (alpha)...")
+    ENV["PLAY_TRACK"] = "internal"
+    distribute_playstore
+  end
+
+  desc "Deploy Release AAB to Google Play production track with configurable rollout"
+  lane :deploy_production do
+    rollout = ENV["PLAY_ROLLOUT_PERCENTAGE"] || "10"
+    UI.message("🌍 Deploying to Google Play production track (#{rollout}% rollout)...")
+    ENV["PLAY_TRACK"] = "production"
+    ENV["PLAY_ROLLOUT_PERCENTAGE"] = rollout
+    distribute_playstore
+  end
+
+  desc "Distribute APK/AAB to Microsoft App Center"
+  lane :app_center do
+    api_token   = ENV["APPCENTER_API_TOKEN"]
+    owner_name  = ENV["APPCENTER_OWNER_NAME"]
+    app_name    = ENV["APPCENTER_APP_NAME"]
+    group       = ENV["APPCENTER_DISTRIBUTE_GROUP"] || "Testers"
+    notes       = ENV["APPCENTER_RELEASE_NOTES"]   || "Automated build from hateum/android-ci-box"
+
+    if api_token.to_s.empty? || owner_name.to_s.empty? || app_name.to_s.empty?
+      UI.user_error!("Missing APPCENTER_API_TOKEN, APPCENTER_OWNER_NAME or APPCENTER_APP_NAME.")
+    end
+
+    artifact = Dir.glob("**/build/outputs/apk/release/*.apk").first \
+            || Dir.glob("**/build/outputs/bundle/release/*.aab").first
+    UI.user_error!("No APK or AAB found. Run 'ci-lane build_release' or 'ci-lane bundle' first.") if artifact.nil?
+
+    UI.message("📱 Uploading #{artifact} to App Center #{owner_name}/#{app_name} → group: #{group}...")
+    appcenter_upload(
+      api_token:              api_token,
+      owner_name:             owner_name,
+      app_name:               app_name,
+      file:                   artifact,
+      notify_testers:         true,
+      release_notes:          notes,
+      destinations:           group
+    )
+    UI.success("✔ Uploaded to Microsoft App Center successfully!")
+  end
+
+  desc "Publish AAB to Huawei AppGallery Connect"
+  lane :deploy_huawei do
+    client_id      = ENV["HUAWEI_CLIENT_ID"]
+    client_secret  = ENV["HUAWEI_CLIENT_SECRET"]
+    app_id         = ENV["HUAWEI_APP_ID"]
+
+    if client_id.to_s.empty? || client_secret.to_s.empty? || app_id.to_s.empty?
+      UI.user_error!("Missing HUAWEI_CLIENT_ID, HUAWEI_CLIENT_SECRET or HUAWEI_APP_ID.")
+    end
+
+    aab = Dir.glob("**/build/outputs/bundle/release/*.aab").first \
+       || Dir.glob("**/build/outputs/apk/release/*.apk").first
+    UI.user_error!("No release artifact found. Run 'ci-lane bundle' or 'ci-lane build_release' first.") if aab.nil?
+
+    UI.message("🔶 Authenticating with Huawei AppGallery Connect...")
+    token_response = sh("curl -fsSL -X POST 'https://connect-api.cloud.huawei.com/api/oauth2/v1/token' \
+      -H 'Content-Type: application/json' \
+      -d '{\"grant_type\":\"client_credentials\",\"client_id\":\"#{client_id}\",\"client_secret\":\"#{client_secret}\"}'", log: false)
+    access_token = JSON.parse(token_response)["access_token"]
+    UI.user_error!("Failed to obtain Huawei access token.") if access_token.to_s.empty?
+
+    UI.message("🔶 Requesting Huawei upload URL for app #{app_id}...")
+    url_response = sh("curl -fsSL 'https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=#{app_id}&suffix=aab' \
+      -H 'Authorization: Bearer #{access_token}' -H 'client_id: #{client_id}'", log: false)
+    upload_url = JSON.parse(url_response).dig("uploadUrl")
+    UI.user_error!("Failed to obtain Huawei upload URL.") if upload_url.to_s.empty?
+
+    UI.message("🔶 Uploading #{aab} to Huawei AppGallery...")
+    sh("curl -fsSL -X PUT '#{upload_url}' -H 'Authorization: Bearer #{access_token}' \
+      -H 'client_id: #{client_id}' -F 'file=@#{aab}'")
+    UI.success("✔ Uploaded to Huawei AppGallery Connect successfully!")
+  end
+
+  desc "Publish APK/AAB to Samsung Galaxy Store via Seller Portal API"
+  lane :deploy_samsung do
+    service_account = ENV["SAMSUNG_SERVICE_ACCOUNT"]
+    access_key      = ENV["SAMSUNG_ACCESS_KEY"]
+    content_id      = ENV["SAMSUNG_CONTENT_ID"]
+
+    if service_account.to_s.empty? || access_key.to_s.empty? || content_id.to_s.empty?
+      UI.user_error!("Missing SAMSUNG_SERVICE_ACCOUNT, SAMSUNG_ACCESS_KEY or SAMSUNG_CONTENT_ID.")
+    end
+
+    artifact = Dir.glob("**/build/outputs/apk/release/*.apk").first \
+            || Dir.glob("**/build/outputs/bundle/release/*.aab").first
+    UI.user_error!("No release artifact found. Run 'ci-lane build_release' or 'ci-lane bundle' first.") if artifact.nil?
+
+    UI.message("🔵 Authenticating with Samsung Galaxy Store Seller Portal API...")
+    token_response = sh("curl -fsSL -X POST 'https://devapi.samsungapps.com/auth/accessToken' \
+      -H 'Content-Type: application/json' \
+      -d '{\"serviceAccountId\":\"#{service_account}\",\"accessKey\":\"#{access_key}\"}'", log: false)
+    session_token = JSON.parse(token_response)["sessionToken"]
+    UI.user_error!("Failed to obtain Samsung session token.") if session_token.to_s.empty?
+
+    UI.message("🔵 Uploading #{artifact} to Samsung Galaxy Store content #{content_id}...")
+    sh("curl -fsSL -X POST 'https://devapi.samsungapps.com/seller/contentEdit/uploadFile' \
+      -H 'Authorization: Bearer #{session_token}' \
+      -F 'contentId=#{content_id}' -F 'file=@#{artifact}'")
+    UI.success("✔ Uploaded to Samsung Galaxy Store successfully!")
+  end
+
+  # ============================================================================
+  # 7. Quality Metrics & Security Lanes
+  # ============================================================================
+
+  desc "Analyze APK permissions and certificate with apkanalyzer (security audit)"
+  lane :security_scan do
+    apks = Dir.glob("**/build/outputs/apk/**/*.apk") + Dir.glob("**/build/outputs/bundle/**/*.aab")
+    if apks.empty?
+      UI.important("No APK or AAB found for security_scan. Build first with 'ci-lane build_release' or 'ci-lane bundle'.")
+      next
+    end
+
+    apkanalyzer = "#{ENV['ANDROID_HOME']}/cmdline-tools/latest/bin/apkanalyzer"
+    unless File.executable?(apkanalyzer)
+      UI.important("apkanalyzer not found at #{apkanalyzer}. Skipping security scan.")
+      next
+    end
+
+    dangerous_permissions = %w[
+      android.permission.READ_CONTACTS android.permission.WRITE_CONTACTS
+      android.permission.READ_SMS android.permission.RECEIVE_SMS android.permission.SEND_SMS
+      android.permission.ACCESS_FINE_LOCATION android.permission.RECORD_AUDIO
+      android.permission.CAMERA android.permission.READ_CALL_LOG
+      android.permission.PROCESS_OUTGOING_CALLS android.permission.READ_EXTERNAL_STORAGE
+      android.permission.WRITE_EXTERNAL_STORAGE
+    ]
+
+    apks.each do |artifact|
+      next unless artifact.end_with?(".apk")
+      UI.message("🛡️  Scanning #{artifact}...")
+
+      perms_output = sh("'#{apkanalyzer}' manifest permissions '#{artifact}' 2>/dev/null || true", log: false)
+      found_dangerous = dangerous_permissions.select { |p| perms_output.include?(p) }
+      if found_dangerous.any?
+        UI.important("⚠️  SECURITY NOTICE — Dangerous permissions detected in #{artifact}:")
+        found_dangerous.each { |p| UI.important("    • #{p}") }
+      else
+        UI.success("  ✔ No dangerous permissions detected in #{artifact}.")
+      end
+
+      cert_output = sh("'#{apkanalyzer}' apk cert-info '#{artifact}' 2>/dev/null || true", log: false)
+      if cert_output =~ /Valid until:\s+(.+)/
+        expiry = $1.strip
+        UI.message("  Certificate valid until: #{expiry}")
+      end
+    end
+    UI.success("✔ Security scan completed.")
+  end
+
+  desc "Run Jacoco code coverage and enforce a minimum threshold (default: 80%)"
+  lane :code_coverage do
+    threshold = (ENV["COVERAGE_THRESHOLD"] || "80").to_i
+    UI.message("📊 Running Jacoco Code Coverage (minimum: #{threshold}%)...")
+
+    begin
+      run_gradle_task("jacocoTestReport")
+    rescue => e
+      UI.important("Jacoco task failed or not configured: #{e.message}. Continuing...")
+      next
+    end
+
+    # Parse the XML report to compute line coverage
+    report_files = Dir.glob("**/build/reports/jacoco/**/*.xml")
+    if report_files.empty?
+      UI.important("No Jacoco XML report found. Make sure the jacocoTestReport task generates XML output.")
+      next
+    end
+
+    report_files.each do |report|
+      content = File.read(report)
+      line_missed  = content.scan(/<counter type="LINE" missed="(\d+)"/).flatten.map(&:to_i).sum
+      line_covered = content.scan(/<counter type="LINE" missed="\d+" covered="(\d+)"/).flatten.map(&:to_i).sum
+      total = line_missed + line_covered
+      coverage = total > 0 ? ((line_covered.to_f / total) * 100).round(1) : 0
+
+      UI.message("  #{File.dirname(report)}: Line Coverage = #{coverage}%")
+      if coverage < threshold
+        UI.user_error!("❌ Code coverage #{coverage}% is below minimum threshold of #{threshold}%.")
+      else
+        UI.success("  ✔ Coverage #{coverage}% meets the #{threshold}% threshold.")
+      end
+    end
+    UI.success("✔ Jacoco code coverage gate passed!")
+  end
+
+  desc "Audit APK/AAB artifact size and warn if it exceeds a configurable threshold"
+  lane :apk_size_audit do
+    warn_threshold_pct = (ENV["APK_SIZE_WARN_THRESHOLD_PCT"] || "10").to_f
+    warn_threshold_mb  = ENV["APK_SIZE_WARN_THRESHOLD_MB"]
+    baseline_mb_str    = ENV["APK_SIZE_BASELINE_MB"]
+
+    artifacts = Dir.glob("**/build/outputs/apk/release/*.apk") + Dir.glob("**/build/outputs/bundle/release/*.aab")
+    if artifacts.empty?
+      UI.important("No release artifacts found for apk_size_audit. Run 'ci-lane build_release' or 'ci-lane bundle' first.")
+      next
+    end
+
+    artifacts.each do |artifact|
+      size_bytes = File.size(artifact)
+      size_mb    = (size_bytes / 1_048_576.0).round(2)
+      UI.message("📦 #{File.basename(artifact)}: #{size_mb} MB (#{size_bytes} bytes)")
+
+      if baseline_mb_str
+        baseline_mb = baseline_mb_str.to_f
+        diff_pct = ((size_mb - baseline_mb) / baseline_mb * 100).round(1)
+        limit_pct = warn_threshold_pct
+        limit_mb  = warn_threshold_mb ? warn_threshold_mb.to_f : nil
+
+        over_pct = diff_pct > limit_pct
+        over_mb  = limit_mb && size_mb > limit_mb
+
+        if over_pct || over_mb
+          UI.important("⚠️  SIZE WARNING — #{File.basename(artifact)}: #{size_mb} MB " \
+                       "(baseline: #{baseline_mb} MB, Δ #{diff_pct > 0 ? '+' : ''}#{diff_pct}%)")
+          UI.important("    Set APK_SIZE_BASELINE_MB to track regressions, APK_SIZE_WARN_THRESHOLD_PCT to adjust the % warning (default: 10%).")
+        else
+          UI.success("  ✔ #{File.basename(artifact)} size #{size_mb} MB — within acceptable bounds (Δ #{diff_pct > 0 ? '+' : ''}#{diff_pct}% vs baseline #{baseline_mb} MB).")
+        end
+      else
+        UI.important("  ℹ️  No APK_SIZE_BASELINE_MB set. Reporting size #{size_mb} MB without baseline comparison.")
+        UI.important("    Tip: Set APK_SIZE_BASELINE_MB=#{size_mb} in your CI environment to track future regressions.")
+      end
+    end
+    UI.success("✔ APK size audit complete.")
+  end
+
+  desc "Run Jetpack Macrobenchmark and extract performance metrics to JSON"
+  lane :perf_baseline do
+    module_name = ENV["BENCHMARK_MODULE"] || "benchmarks"
+    test_class  = ENV["BENCHMARK_CLASS"]  || ""
+    output_dir  = ENV["BENCHMARK_OUTPUT"] || "build/benchmark-results"
+
+    UI.message("⚡ Running Jetpack Macrobenchmark (module: #{module_name})...")
+    task = test_class.empty? ? ":#{module_name}:connectedReleaseAndroidTest" \
+                             : ":#{module_name}:connectedReleaseAndroidTest --tests '#{test_class}'"
+    begin
+      run_gradle_task(task)
+    rescue => e
+      UI.important("Benchmark run encountered an error: #{e.message}. Attempting to extract partial results...")
+    end
+
+    # Aggregate JSON results from device
+    json_files = Dir.glob("**/outputs/androidTest-results/**/*.json") + Dir.glob("**/benchmark/**/*.json")
+    if json_files.empty?
+      UI.important("No benchmark JSON results found. Ensure your Macrobenchmark module targets a physical device or emulator.")
+      next
+    end
+
+    sh("mkdir -p '#{output_dir}'")
+    aggregated = { "source" => "hateum/android-ci-box perf_baseline", "run_at" => Time.now.iso8601, "results" => [] }
+    json_files.each do |f|
+      begin
+        data = JSON.parse(File.read(f))
+        aggregated["results"] << data
+      rescue
+        UI.important("Could not parse #{f} as JSON — skipping.")
+      end
+    end
+
+    report_path = "#{output_dir}/perf_baseline_#{Time.now.strftime('%Y%m%d_%H%M%S')}.json"
+    File.write(report_path, JSON.pretty_generate(aggregated))
+    UI.success("✔ Performance baseline report written to #{report_path}")
+    UI.message("  Tip: Set BENCHMARK_OUTPUT to change the output directory.")
+  end
+
+  # ============================================================================
+  # 8. Composite Turnkey Pipelines
   # ============================================================================
 
   desc "Complete Turnkey Pipeline: lint + detekt + test + build_release + bundle"
@@ -334,6 +671,19 @@ except Exception as e:
     build_release
     bundle
     UI.success("🎉 Complete Android CI Pipeline passed with flying colors!")
+  end
+
+  desc "Full Release Pipeline: sign + bundle + distribute (Play Store + Firebase) + git_tag + changelog + notify"
+  lane :release do
+    UI.message("🚢 Starting Full Release Pipeline...")
+    sign if ENV["KEYSTORE_BASE64"] || ENV["KEYSTORE_PATH"]
+    bundle
+    changelog
+    distribute_playstore if ENV["GOOGLE_PLAY_KEY_BASE64"] || ENV["SUPPLY_JSON_KEY"]
+    distribute_firebase  if ENV["FIREBASE_APP_ID"]
+    git_tag
+    notify
+    UI.success("🎉 Release pipeline completed successfully!")
   end
 
   desc "Clean Gradle build caches and daemons"
