@@ -27,3 +27,4 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0021](0021-production-hardening-cgroups-memory-tuning-and-kpi-preflight.md) | Production Hardening, Dynamic Cgroup Memory Tuning and KPI Pre-flight Gate | Accepted | 2026-11-15 |
 | [ADR-0022](0022-node-24-actions-migration-and-trivy-sarif-remediation.md) | GitHub Actions Node 24 Migration, Python Toolchain Security Upgrades and Comprehensive Trivy SARIF Remediation | Accepted | 2026-11-15 |
 | [ADR-0023](0023-universal-dependency-watchdog-and-dependabot-architecture.md) | Universal Dependency Watchdog, GitHub Actions Audit and Automated Pull Request Architecture | Accepted | 2026-11-15 |
+| [ADR-0024](0024-turnkey-built-in-fastlane-lanes-and-commercial-monetization.md) | Turnkey Built-In Fastlane Lanes (`ci-lane`) and Commercial B2B Monetization Architecture | Accepted | 2026-11-18 |

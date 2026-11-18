@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# hateum/android-ci-box: Turnkey Fastlane CI/CD Lane Runner (ci-lane)
+# Auto-detects project Fastfile or falls back to built-in universal Fastfile
+# ==============================================================================
+
+set -euo pipefail
+
+BUILTIN_FASTFILE="/opt/fastlane/Fastfile"
+FALLBACK_FASTFILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/fastlane/Fastfile.builtin"
+
+# Color helpers
+if [ -t 1 ]; then
+    BOLD="\033[1m"
+    GREEN="\033[32m"
+    BLUE="\033[34m"
+    CYAN="\033[36m"
+    RESET="\033[0m"
+else
+    BOLD=""
+    GREEN=""
+    BLUE=""
+    CYAN=""
+    RESET=""
+fi
+
+show_help() {
+    cat <<EOF
+${BOLD}hateum/android-ci-box: Turnkey Fastlane CI/CD Lane Runner (ci-lane)${RESET}
+
+${CYAN}USAGE:${RESET}
+  ci-lane <lane_name> [options...]
+  ci-lane list
+  ci-lane help [lane_name]
+
+${CYAN}DESCRIPTION:${RESET}
+  Executes Fastlane lanes with ZERO project configuration required.
+  If the project in \`/project\` has its own \`fastlane/Fastfile\`, it runs that.
+  Otherwise, it automatically runs the universal built-in Fastfile in \`/opt/fastlane/Fastfile\`.
+
+${CYAN}EXAMPLES:${RESET}
+  ci-lane test                                # Run Unit Tests
+  ci-lane lint                                # Run Android Lint
+  ci-lane detekt                              # Run Detekt Kotlin Linter
+  ci-lane build_debug                         # Assemble Debug APK
+  ci-lane build_release                       # Assemble Release APK
+  ci-lane bundle                              # Assemble Release Android App Bundle (.aab)
+  ci-lane badge                               # Overlay badge/ribbon on launcher icons
+  ci-lane sign                                # Sign APK/AAB with Base64 Keystore
+  ci-lane distribute_firebase                 # Deploy to Firebase App Distribution
+  ci-lane distribute_playstore                # Deploy to Google Play Console
+  ci-lane notify                              # Dispatch ChatOps notifications (Slack, Teams, Discord, Telegram)
+  ci-lane all                                 # Run full pipeline (lint + detekt + test + build_release + bundle)
+
+Run '${BOLD}ci-lane list${RESET}' to see all available built-in lanes and their environment variables.
+EOF
+}
+
+show_list() {
+    cat <<EOF
+${BOLD}Available Turnkey Built-in Lanes in hateum/android-ci-box:${RESET}
+
+${CYAN}🧪 QUALITY & TESTS:${RESET}
+  ${GREEN}test${RESET}                 Run JUnit Unit Tests across all modules
+  ${GREEN}lint${RESET}                 Run Android Lint static analysis
+  ${GREEN}detekt${RESET}               Run Detekt Kotlin code smell analysis
+  ${GREEN}sonar${RESET}                Run SonarQube / SonarCloud (requires SONAR_TOKEN)
+  ${GREEN}screenshot_tests${RESET}     Run Roborazzi or Paparazzi verification tasks
+
+${CYAN}📦 PACKAGING & BRANDING:${RESET}
+  ${GREEN}build_debug${RESET}          Assemble Debug APK
+  ${GREEN}build_release${RESET}        Assemble Release APK
+  ${GREEN}bundle${RESET}               Assemble Release Android App Bundle (.aab)
+  ${GREEN}badge${RESET}                Overlay badge on launcher icons
+                       Vars: BADGE_TEXT (default: 'BETA'), BADGE_COLOR, BADGE_GRAVITY
+
+${CYAN}🔐 SIGNATURE & DISTRIBUTION:${RESET}
+  ${GREEN}sign${RESET}                 Sign APK or AAB
+                       Vars: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+  ${GREEN}distribute_firebase${RESET}  Deploy to Firebase App Distribution
+                       Vars: FIREBASE_APP_ID, FIREBASE_TOKEN, FIREBASE_GROUPS
+  ${GREEN}distribute_playstore${RESET} Deploy to Google Play Console
+                       Vars: GOOGLE_PLAY_KEY_BASE64 or SUPPLY_JSON_KEY, PLAY_TRACK
+  ${GREEN}distribute_github${RESET}   Upload APK/AAB to GitHub Releases via gh CLI
+
+${CYAN}💬 CHATOPS & NOTIFICATIONS:${RESET}
+  ${GREEN}notify_slack${RESET}         Send Slack card (requires SLACK_WEBHOOK_URL)
+  ${GREEN}notify_teams${RESET}         Send Microsoft Teams card (requires TEAMS_WEBHOOK_URL)
+  ${GREEN}notify${RESET}               Smart multi-channel dispatch (Slack, Teams, Discord, Telegram)
+
+${CYAN}🚀 COMPOSITE PIPELINES:${RESET}
+  ${GREEN}all${RESET}                  Complete pipeline (lint + detekt + test + build_release + bundle)
+  ${GREEN}clean${RESET}                Clean Gradle build caches and daemons
+EOF
+}
+
+# Main command router
+if [ $# -eq 0 ] || [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    show_help
+    exit 0
+fi
+
+if [ "$1" = "list" ] || [ "$1" = "--list" ]; then
+    show_list
+    exit 0
+fi
+
+LANE_NAME="$1"
+shift
+
+# Check if project contains its own Fastfile
+PROJECT_FASTFILE=""
+if [ -f "fastlane/Fastfile" ]; then
+    PROJECT_FASTFILE="fastlane/Fastfile"
+elif [ -f "Fastfile" ]; then
+    PROJECT_FASTFILE="Fastfile"
+fi
+
+if [ -n "$PROJECT_FASTFILE" ]; then
+    echo -e "${BLUE}ℹ [ci-lane] Detected project Fastfile at ${PROJECT_FASTFILE}.${RESET}"
+    if [ -f "Gemfile" ] && command -v bundle >/dev/null 2>&1; then
+        exec bundle exec fastlane "$LANE_NAME" "$@"
+    else
+        exec fastlane "$LANE_NAME" "$@"
+    fi
+else
+    # Fall back to built-in universal Fastfile
+    RESOLVED_BUILTIN=""
+    if [ -f "$BUILTIN_FASTFILE" ]; then
+        RESOLVED_BUILTIN="$BUILTIN_FASTFILE"
+    elif [ -f "$FALLBACK_FASTFILE" ]; then
+        RESOLVED_BUILTIN="$FALLBACK_FASTFILE"
+    else
+        echo "Error: Built-in Fastfile not found at $BUILTIN_FASTFILE or $FALLBACK_FASTFILE" >&2
+        exit 1
+    fi
+
+    echo -e "${CYAN}⚡ [ci-lane] Executing built-in turnkey lane '${LANE_NAME}' from ${RESOLVED_BUILTIN}...${RESET}"
+    export FASTLANE_FASTFILE="$RESOLVED_BUILTIN"
+    exec fastlane "$LANE_NAME" "$@"
+fi

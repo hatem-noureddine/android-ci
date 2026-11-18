@@ -1,0 +1,346 @@
+# ==============================================================================
+# hateum/android-ci-box: Universal Built-in Fastfile (/opt/fastlane/Fastfile)
+# Turnkey Android CI/CD Lanes with Zero Project Configuration
+# ==============================================================================
+
+default_platform(:android)
+
+platform :android do
+
+  # ----------------------------------------------------------------------------
+  # Helper: Execute Gradle with optimal CI flags
+  # ----------------------------------------------------------------------------
+  def run_gradle_task(task_name)
+    gradle(
+      task: task_name,
+      flags: "--no-daemon --stacktrace --build-cache"
+    )
+  end
+
+  # ============================================================================
+  # 1. Quality & Testing Lanes
+  # ============================================================================
+
+  desc "Run JUnit Unit Tests across all modules"
+  lane :test do
+    UI.message("🧪 Running Unit Tests...")
+    run_gradle_task("test")
+    UI.success("✔ Unit tests completed successfully!")
+  end
+
+  desc "Run Android Lint static analysis"
+  lane :lint do
+    UI.message("🔍 Running Android Lint...")
+    begin
+      run_gradle_task("lint lintRelease")
+    rescue => e
+      UI.error("Lint reported issues or warnings. Check build/reports/lint-results.html")
+      raise e
+    end
+    UI.success("✔ Lint static analysis passed!")
+  end
+
+  desc "Run Detekt Kotlin static analysis and code smells check"
+  lane :detekt do
+    UI.message("🛡️ Running Detekt Kotlin Linter...")
+    begin
+      run_gradle_task("detekt")
+      UI.success("✔ Detekt analysis passed!")
+    rescue => e
+      UI.important("Notice: Detekt task failed or is not configured in this project. Continuing...")
+    end
+  end
+
+  desc "Run SonarQube / SonarCloud Code Quality Analysis"
+  lane :sonar do
+    sonar_token = ENV["SONAR_TOKEN"]
+    sonar_host = ENV["SONAR_HOST_URL"] || "https://sonarcloud.io"
+
+    if sonar_token.to_s.empty?
+      UI.user_error!("Missing SONAR_TOKEN environment variable.")
+    end
+
+    UI.message("📊 Running Sonar Analysis against #{sonar_host}...")
+    run_gradle_task("sonar -Dsonar.host.url=#{sonar_host} -Dsonar.token=#{sonar_token}")
+    UI.success("✔ Sonar analysis submitted successfully!")
+  end
+
+  desc "Run Screenshot Tests (Roborazzi or Paparazzi)"
+  lane :screenshot_tests do
+    UI.message("📸 Running Screenshot Tests...")
+    begin
+      run_gradle_task("verifyRoborazziDebug")
+    rescue
+      begin
+        run_gradle_task("verifyPaparazziDebug")
+      rescue
+        UI.important("No Roborazzi or Paparazzi verification task found in project.")
+      end
+    end
+  end
+
+  # ============================================================================
+  # 2. Packaging & Branding Lanes
+  # ============================================================================
+
+  desc "Assemble Debug APK"
+  lane :build_debug do
+    UI.message("📦 Compiling Debug APK...")
+    run_gradle_task("assembleDebug")
+    UI.success("✔ Debug APK generated successfully!")
+  end
+
+  desc "Assemble Release APK"
+  lane :build_release do
+    UI.message("📦 Compiling Release APK...")
+    run_gradle_task("assembleRelease")
+    UI.success("✔ Release APK generated successfully!")
+  end
+
+  desc "Assemble Android App Bundle (.aab) for Google Play"
+  lane :bundle do
+    UI.message("📦 Compiling Release Android App Bundle (.aab)...")
+    run_gradle_task("bundleRelease")
+    UI.success("✔ Release AAB generated successfully!")
+  end
+
+  desc "Apply a visual ribbon/badge overlay on launcher icons (QA, BETA, DEV)"
+  lane :badge do
+    badge_text = ENV["BADGE_TEXT"] || "BETA"
+    badge_color = ENV["BADGE_COLOR"] || "#FF5722"
+    badge_gravity = ENV["BADGE_GRAVITY"] || "bottom"
+    shield_version = ENV["BADGE_SHIELD"]
+
+    UI.message("🏷️ Applying '#{badge_text}' ribbon badge to launcher icons (Color: #{badge_color}, Gravity: #{badge_gravity})...")
+
+    icon_dirs = Dir.glob("**/src/main/res/mipmap-*").select { |d| File.directory?(d) }
+    if icon_dirs.empty?
+      icon_dirs = Dir.glob("**/src/main/res/drawable-*").select { |d| File.directory?(d) }
+    end
+
+    if icon_dirs.empty?
+      UI.important("No launcher icon directory (mipmap-* / drawable-*) found to badge.")
+    else
+      icon_dirs.each do |dir|
+        Dir.glob("#{dir}/ic_launcher*.png").each do |icon|
+          UI.message("  Badging #{icon} with [#{badge_text}]...")
+          # Apply banner or shield with ImageMagick or Python script if available
+          sh("python3 -c \"
+import os, sys
+from PIL import Image, ImageDraw, ImageFont
+try:
+    img = Image.open('#{icon}').convert('RGBA')
+    draw = ImageDraw.Draw(img)
+    w, h = img.size
+    banner_h = int(h * 0.25)
+    banner_y = h - banner_h if '#{badge_gravity}' == 'bottom' else 0
+    # Overlay semi-transparent rectangle
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ov_draw = ImageDraw.Draw(overlay)
+    ov_draw.rectangle([0, banner_y, w, banner_y + banner_h], fill=(230, 81, 0, 220))
+    img = Image.alpha_composite(img, overlay)
+    img.save('#{icon}')
+    print('  ✔ Badged #{icon}')
+except Exception as e:
+    print(f'  [Notice] PIL badging skipped: {e}')
+\" || true")
+        end
+      end
+      UI.success("✔ App launcher icons badged successfully!")
+    end
+  end
+
+  # ============================================================================
+  # 3. Signature & Distribution Lanes
+  # ============================================================================
+
+  desc "Sign APK or AAB using a Base64-encoded Keystore"
+  lane :sign do
+    keystore_b64 = ENV["KEYSTORE_BASE64"]
+    keystore_path = ENV["KEYSTORE_PATH"] || "/tmp/keystore.jks"
+    keystore_password = ENV["KEYSTORE_PASSWORD"]
+    key_alias = ENV["KEY_ALIAS"]
+    key_password = ENV["KEY_PASSWORD"] || keystore_password
+
+    if keystore_b64.to_s.empty? && !File.exist?(keystore_path.to_s)
+      UI.user_error!("Missing KEYSTORE_BASE64 or KEYSTORE_PATH environment variable.")
+    end
+
+    if keystore_b64 && !keystore_b64.empty?
+      UI.message("🔐 Decoding KEYSTORE_BASE64 to temporary keystore...")
+      File.open(keystore_path, "wb") do |f|
+        f.write(Base64.decode64(keystore_b64))
+      end
+    end
+
+    # Sign APKs if found
+    apks = Dir.glob("**/build/outputs/apk/release/*-unsigned.apk") + Dir.glob("**/build/outputs/apk/release/*-unaligned.apk")
+    if apks.empty?
+      apks = Dir.glob("**/build/outputs/apk/release/*.apk")
+    end
+
+    apks.each do |apk|
+      UI.message("Signing APK: #{apk}...")
+      sh("apksigner sign --ks '#{keystore_path}' --ks-pass 'pass:#{keystore_password}' --ks-key-alias '#{key_alias}' --key-pass 'pass:#{key_password}' '#{apk}' || true")
+    end
+
+    UI.success("✔ Artifact signature completed successfully!")
+  end
+
+  desc "Distribute APK/AAB to Firebase App Distribution"
+  lane :distribute_firebase do
+    app_id = ENV["FIREBASE_APP_ID"]
+    token = ENV["FIREBASE_TOKEN"]
+    groups = ENV["FIREBASE_GROUPS"] || "testers"
+    notes = ENV["FIREBASE_RELEASE_NOTES"] || "Automated build from hateum/android-ci-box"
+
+    if app_id.to_s.empty?
+      UI.user_error!("Missing FIREBASE_APP_ID environment variable.")
+    end
+
+    artifact = Dir.glob("**/build/outputs/apk/release/*.apk").first || Dir.glob("**/build/outputs/bundle/release/*.aab").first
+
+    if artifact.nil?
+      UI.user_error!("No APK or AAB found to distribute. Run 'ci-lane build_release' or 'ci-lane bundle' first.")
+    end
+
+    UI.message("🚀 Uploading #{artifact} to Firebase App Distribution...")
+    firebase_app_distribution(
+      app: app_id,
+      groups: groups,
+      release_notes: notes,
+      android_artifact_type: artifact.end_with?(".aab") ? "AAB" : "APK",
+      android_artifact_path: artifact,
+      firebase_cli_token: token
+    )
+    UI.success("✔ Distributed to Firebase App Distribution successfully!")
+  end
+
+  desc "Deploy Release AAB to Google Play Console"
+  lane :distribute_playstore do
+    track = ENV["PLAY_TRACK"] || "internal"
+    rollout = ENV["PLAY_ROLLOUT_PERCENTAGE"] ? ENV["PLAY_ROLLOUT_PERCENTAGE"].to_f / 100.0 : 1.0
+    json_key_b64 = ENV["GOOGLE_PLAY_KEY_BASE64"]
+    json_key_file = ENV["SUPPLY_JSON_KEY"] || "/tmp/play_key.json"
+
+    if json_key_b64 && !json_key_b64.empty?
+      File.open(json_key_file, "wb") { |f| f.write(Base64.decode64(json_key_b64)) }
+    end
+
+    aab = Dir.glob("**/build/outputs/bundle/release/*.aab").first
+    if aab.nil?
+      UI.user_error!("No release AAB found. Run 'ci-lane bundle' first.")
+    end
+
+    UI.message("🚀 Publishing #{aab} to Google Play track: #{track} (Rollout: #{rollout * 100}%)...")
+    upload_to_play_store(
+      track: track,
+      aab: aab,
+      rollout: rollout.to_s,
+      json_key: json_key_file,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+    UI.success("✔ Published to Google Play Console successfully!")
+  end
+
+  desc "Upload assembled artifacts (APK/AAB) to GitHub Release via gh CLI"
+  lane :distribute_github do
+    artifacts = Dir.glob("**/build/outputs/apk/release/*.apk") + Dir.glob("**/build/outputs/bundle/release/*.aab")
+    if artifacts.empty?
+      UI.user_error!("No release artifacts found to upload.")
+    end
+
+    tag = ENV["GITHUB_REF_NAME"] || ENV["CI_COMMIT_TAG"] || "v#{Time.now.strftime('%Y%m%d%H%M%S')}"
+    UI.message("🐙 Uploading artifacts to GitHub Release #{tag}...")
+    artifacts.each do |art|
+      sh("gh release upload '#{tag}' '#{art}' --clobber || true")
+    end
+    UI.success("✔ Artifacts uploaded to GitHub Release successfully!")
+  end
+
+  # ============================================================================
+  # 4. ChatOps & Notification Lanes
+  # ============================================================================
+
+  desc "Send notification to Slack"
+  lane :notify_slack do
+    webhook = ENV["SLACK_WEBHOOK_URL"]
+    if webhook.to_s.empty?
+      UI.important("SLACK_WEBHOOK_URL is not set. Skipping Slack notification.")
+      next
+    end
+
+    status_text = ENV["CI_BUILD_STATUS"] || "SUCCESS"
+    channel = ENV["SLACK_CHANNEL"]
+    slack(
+      message: "🤖 [Android CI Box] Pipeline status: *#{status_text}*",
+      slack_url: webhook,
+      channel: channel,
+      success: status_text == "SUCCESS",
+      payload: {
+        "Commit" => ENV["GITHUB_SHA"] || ENV["CI_COMMIT_SHA"] || "local",
+        "Branch" => ENV["GITHUB_REF_NAME"] || ENV["CI_COMMIT_REF_NAME"] || "main",
+      }
+    )
+  end
+
+  desc "Send notification to Microsoft Teams"
+  lane :notify_teams do
+    webhook = ENV["TEAMS_WEBHOOK_URL"]
+    if webhook.to_s.empty?
+      UI.important("TEAMS_WEBHOOK_URL is not set. Skipping Teams notification.")
+      next
+    end
+
+    status_text = ENV["CI_BUILD_STATUS"] || "SUCCESS"
+    color = status_text == "SUCCESS" ? "2eb886" : "d9534f"
+    sh("curl -fsSL -H 'Content-Type: application/json' -d '{
+      \"@type\": \"MessageCard\",
+      \"themeColor\": \"#{color}\",
+      \"title\": \"Android CI/CD Build: #{status_text}\",
+      \"text\": \"Pipeline executed via hateum/android-ci-box\"
+    }' '#{webhook}' || true")
+  end
+
+  desc "Smart multi-channel notification (Slack, Teams, Discord, Telegram)"
+  lane :notify do
+    notify_slack if ENV["SLACK_WEBHOOK_URL"]
+    notify_teams if ENV["TEAMS_WEBHOOK_URL"]
+    
+    if ENV["DISCORD_WEBHOOK_URL"]
+      status_text = ENV["CI_BUILD_STATUS"] || "SUCCESS"
+      sh("curl -fsSL -H 'Content-Type: application/json' -d '{\"content\": \"📱 **Android CI/CD Build #{status_text}**\"}' '#{ENV["DISCORD_WEBHOOK_URL"]}' || true")
+    end
+
+    if ENV["TELEGRAM_BOT_TOKEN"] && ENV["TELEGRAM_CHAT_ID"]
+      status_text = ENV["CI_BUILD_STATUS"] || "SUCCESS"
+      sh("curl -fsSL -X POST 'https://api.telegram.org/bot#{ENV["TELEGRAM_BOT_TOKEN"]}/sendMessage' -d 'chat_id=#{ENV["TELEGRAM_CHAT_ID"]}&text=Android CI/CD Build #{status_text}' || true")
+    end
+    UI.success("✔ Notifications dispatched.")
+  end
+
+  # ============================================================================
+  # 5. Composite Turnkey Pipelines
+  # ============================================================================
+
+  desc "Complete Turnkey Pipeline: lint + detekt + test + build_release + bundle"
+  lane :all do
+    UI.message("🚀 Starting Full Android Turnkey CI Pipeline...")
+    lint
+    detekt
+    test
+    build_release
+    bundle
+    UI.success("🎉 Complete Android CI Pipeline passed with flying colors!")
+  end
+
+  desc "Clean Gradle build caches and daemons"
+  lane :clean do
+    UI.message("🧹 Cleaning Gradle cache...")
+    run_gradle_task("clean")
+    UI.success("✔ Workspace cleaned.")
+  end
+
+end

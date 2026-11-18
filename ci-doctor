@@ -5,7 +5,7 @@
 
 set -u
 
-VERSION="1.6.4"
+VERSION="1.7.0"
 
 MODE="full"
 for arg in "$@"; do

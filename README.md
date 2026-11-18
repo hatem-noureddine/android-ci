@@ -11,6 +11,7 @@
 [![Java](https://img.shields.io/badge/OpenJDK-17%20%7C%2021%20(Default)-ED8B00?style=flat-square&logo=openjdk)](https://openjdk.org)
 [![Fastlane](https://img.shields.io/badge/Fastlane-2.241.2-00F?style=flat-square&logo=fastlane)](https://fastlane.tools)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-pink?style=flat-square&logo=githubsponsors)](https://github.com/sponsors/hatem-noureddine)
 
 A battle-tested, high-performance, and rootless Docker container engineered for **Android CI/CD automation** across **GitHub Actions**, **GitLab CI**, **Jenkins**, and **Bitbucket Pipelines**.
 
@@ -43,7 +44,7 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 | Feature / Capability | `latest` (Full Batteries-Included) | `slim` (Ultra-Fast CI) |
 | :--- | :--- | :--- |
-| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.6.4`) | `hateum/android-ci-box:slim` (or `1.6.4-slim`) |
+| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.7.0`) | `hateum/android-ci-box:slim` (or `1.7.0-slim`) |
 | **Compressed Size** | ~3.5 GB | **~2.2 GB (~35% faster download)** |
 | **Android SDK APIs (35, 36, 37)** | ✅ Yes | ✅ Yes |
 | **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
@@ -224,6 +225,63 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `install-ndk-version` | `/usr/local/bin/install-ndk-version` | `install-ndk-version 27.2.12479018 [cmake]` | Dynamically installs Android NDK and CMake with rootless permissions. |
 | `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
+| `ci-lane` | `/usr/local/bin/ci-lane` | `ci-lane test`, `ci-lane badge`, `ci-lane all` | Turnkey universal Fastlane runner with zero Fastfile setup. |
+
+---
+
+## ⚡ Turnkey Mobile CI/CD with `ci-lane`
+
+Starting with **v1.7.0**, `hateum/android-ci-box` ships with **pre-packaged universal Fastlane lanes** directly inside the image. You don't even need a `Fastfile` in your repository!
+
+Run any quality, build, badging, or distribution step with a single command:
+```bash
+ci-lane test                # Runs unit tests with JUnit/XML report extraction
+ci-lane lint                # Executes Android Lint with HTML reports
+ci-lane badge               # Overlays QA/Build badges onto launcher icons (BADGE_TEXT="BETA")
+ci-lane distribute_firebase # Deploys release AAB/APK to Firebase App Distribution
+ci-lane all                 # Full pipeline: clean -> lint -> test -> badge -> build -> distribute
+```
+
+### 1-Line CI Integration Examples
+
+#### GitHub Actions (`.github/workflows/android.yml`)
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: hateum/android-ci-box:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Quality Suite & Build
+        run: ci-lane all
+        env:
+          BADGE_TEXT: "QA-${{ github.run_number }}"
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
+#### GitLab CI (`.gitlab-ci.yml`)
+```yaml
+test_and_build:
+  image: hateum/android-ci-box:latest
+  script:
+    - ci-lane all
+  variables:
+    BADGE_TEXT: "CI-$CI_PIPELINE_IID"
+```
+
+#### Bitrise (`bitrise.yml`)
+```yaml
+workflows:
+  primary:
+    steps:
+      - script:
+          title: Run Turnkey ci-lane
+          inputs:
+            - content: |
+                docker run --rm -v "$BITRISE_SOURCE_DIR:/project" -w /project hateum/android-ci-box:latest ci-lane all
+```
+
+📖 **Full Lane Catalog, Environment Variables, and Icon Badging**: See the complete documentation in [Turnkey Fastlane Lanes Guide (`docs/ci-lane.md`)](docs/ci-lane.md).
 
 ---
 
@@ -406,6 +464,25 @@ Mount your corporate certificate into `/certificates`:
 
 ### 3. What is the status of the Android Emulator on ARM64 Linux hosts?
 Google compiles the Linux SDK Emulator (`emulator`) exclusively for `x86_64`. On ARM64 Linux hosts (e.g. AWS Graviton), compilation, linting, unit tests, and Fastlane run at native silicon speed, while headless emulator tests require an `x86_64` runner.
+
+---
+
+## 💼 Enterprise Support & Android CI/CD Consulting
+
+Are you spending hours fixing failing Android CI builds, out-of-memory Gradle crashes (`OOMKilled exit code 137`), or complicated Google Play Store release pipelines?
+
+As a **Senior Android Engineer & Mobile Release Specialist**, I offer specialized technical consulting and hands-on implementation to bring world-class developer experience, rock-solid stability, and rapid release cycles to your engineering team:
+
+| Engagement | What We Deliver | Best For |
+| :--- | :--- | :--- |
+| **🚀 Turnkey CI/CD Setup** | Complete GitHub Actions, GitLab CI, or Bitrise pipeline from scratch using `hateum/android-ci-box`. Zero boilerplate, instant green builds. | Teams starting a new app or modernizing legacy CI. |
+| **⚡ Gradle Speedup & OOMKill Audit** | In-depth Gradle build scan, daemon memory tuning, remote cache configuration, and configuration cache enablement. Slash build times by 40-70%. | Teams with slow builds (>15min) or random pipeline crashes. |
+| **📦 Fastlane & Store Release Automation** | End-to-end continuous delivery pipeline: automated version bumping, dynamic icon badging, Google Play & Firebase App Distribution. | Teams seeking reliable zero-touch app deployments. |
+| **🛡️ Modern Android Architecture & AGP 9 Migration** | Migration assistance for AGP 8/9+, Gradle 8/9, Kotlin Multiplatform, modularization, and Gradle Managed Devices. | Teams modernizing their Android codebase and toolchains. |
+
+Need help accelerating your Android engineering workflow?
+
+👉 **[Contact Me via Secure Inquiry Form](https://hatem-noureddine.github.io/android-ci/#contact)** *(Responses typically within 24 business hours)*
 
 ---
 
