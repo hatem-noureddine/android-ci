@@ -1,7 +1,7 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.7.2
+version: 1.7.3
 triggers:
   - "build android"
   - "run android tests"
@@ -34,8 +34,8 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 ## 1. Container Specifications & Runtime Context
 
 - **Docker Images**:
-  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.2`): Full batteries-included image with Android Emulator & GMD.
-  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.2-slim`): Ultra-fast compilation and linting image (~35% smaller).
+  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.3`): Full batteries-included image with Android Emulator & GMD.
+  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.3-slim`): Ultra-fast compilation and linting image (~35% smaller).
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -281,6 +281,38 @@ ci-lane release              # sign + bundle + distribute (Play Store + Firebase
 
 *Note: If the current workspace contains its own `fastlane/Fastfile` or `Fastfile`, `ci-lane` automatically delegates to your custom Fastfile instead.*
 
+#### Complete Lane Configuration Reference:
+| Category | Lane | Environment Variables & Purpose |
+| :--- | :--- | :--- |
+| **Quality** | `test` | Runs JUnit tests across all modules. Parses results to summary. |
+| | `lint` | Android Lint static analysis. Captures errors & warnings count. |
+| | `detekt` | Detekt Kotlin static analysis. |
+| | `sonar` | `SONAR_TOKEN` (*Required*), `SONAR_HOST_URL` (default: `https://sonarcloud.io`). |
+| | `code_coverage` | `COVERAGE_THRESHOLD` (default: `80`): Fails build if Jacoco coverage % is below minimum. |
+| | `security_scan` | Apkanalyzer audit for dangerous permissions and certificate expiry. |
+| | `perf_baseline` | `BENCHMARK_MODULE`, `BENCHMARK_CLASS`, `BENCHMARK_OUTPUT`: Macrobenchmark JSON report. |
+| **Packaging** | `build_debug` | Assembles debug APK. |
+| | `build_release` | Assembles release APK. |
+| | `bundle` | Assembles release Android App Bundle (.aab). |
+| | `badge` | `BADGE_TEXT` (default: `BETA`), `BADGE_COLOR` (default: `#FF5722`), `BADGE_GRAVITY` (`bottom`/`top`). |
+| | `apk_size_audit`| `APK_SIZE_BASELINE_MB`, `APK_SIZE_WARN_THRESHOLD_PCT` (default: 10%), `APK_SIZE_WARN_THRESHOLD_MB`. |
+| **Signing** | `sign` | `KEYSTORE_BASE64` or `KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. |
+| **Stores** | `distribute_firebase` | `FIREBASE_APP_ID`, `FIREBASE_TOKEN`, `FIREBASE_GROUPS`, `FIREBASE_RELEASE_NOTES`. |
+| | `distribute_playstore` | `GOOGLE_PLAY_KEY_BASE64` / `SUPPLY_JSON_KEY`, `PLAY_TRACK`, `PLAY_ROLLOUT_PERCENTAGE`. |
+| | `deploy_alpha` | Shortcut for Google Play internal track (`PLAY_TRACK=internal`). |
+| | `deploy_production` | Shortcut for Google Play production (`PLAY_ROLLOUT_PERCENTAGE`, default: 10%). |
+| | `app_center` | `APPCENTER_API_TOKEN`, `APPCENTER_OWNER_NAME`, `APPCENTER_APP_NAME`, `APPCENTER_DISTRIBUTE_GROUP`. |
+| | `deploy_huawei` | `HUAWEI_CLIENT_ID`, `HUAWEI_CLIENT_SECRET`, `HUAWEI_APP_ID`. |
+| | `deploy_samsung` | `SAMSUNG_SERVICE_ACCOUNT`, `SAMSUNG_ACCESS_KEY`, `SAMSUNG_CONTENT_ID`. |
+| | `distribute_github` | `GITHUB_REF_NAME` or `CI_COMMIT_TAG`: Uploads APK/AAB to GitHub Release. |
+| **VCS** | `changelog` | `CHANGELOG_FILE` (default: `CHANGELOG.md`): Conventional Commits extractor. |
+| | `git_tag` | `GIT_TAG_NAME` (optional override): Tags `vX.Y.Z` from app `versionName`. |
+| **ChatOps** | `notify_slack` | `SLACK_WEBHOOK_URL`, `SLACK_CHANNEL`, `CI_BUILD_STATUS`. |
+| | `notify_teams` | `TEAMS_WEBHOOK_URL`, `CI_BUILD_STATUS`. |
+| | `notify` | Multi-channel broadcast to Slack, Teams, Discord, Telegram. |
+| **Composite** | `all` | Full quality & build pipeline (`lint` -> `detekt` -> `test` -> `build_release` -> `bundle`). |
+| | `release` | Full release pipeline (`sign` -> `bundle` -> `stores` -> `git_tag` -> `changelog` -> `notify`). |
+
 #### Universal CI Summary & Sticky PR Comments:
 `ci-lane` automatically generates an executive Markdown summary after every lane run:
 - **GitHub Actions**: Injected into `$GITHUB_STEP_SUMMARY` and posted as a sticky PR comment (`<!-- ci-lane-summary -->`).
@@ -301,42 +333,149 @@ bundletool build-apks \
 
 ### Step 8: Multi-Platform CI/CD Integration & Runner Setup
 
-Ready-to-use pipeline configurations are available for all major CI/CD engines under [`examples/ci/`](../../../examples/ci/):
-
-#### A. GitLab CI/CD (`.gitlab-ci.yml`)
+#### A. Turnkey GitLab CI/CD with `ci-lane` (`.gitlab-ci.yml`)
 ```yaml
+stages: [quality, build, distribute, release]
+
 default:
-  image: hateum/android-ci-box:latest
+  image: hateum/android-ci-box:slim
   before_script:
     - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
-    - chmod +x ./gradlew
   cache:
-    key:
-      files:
-        - gradle/wrapper/gradle-wrapper.properties
-        - "**/*.gradle*"
+    key: ${CI_COMMIT_REF_SLUG}
     paths:
-      - .gradle/wrapper/
       - .gradle/caches/
+      - .gradle/wrapper/
 
-test_and_lint:
-  stage: test
+pr_quality_gate:
+  stage: quality
   script:
-    - ./gradlew lintRelease testReleaseUnitTest check --no-daemon
+    - ci-lane lint
+    - ci-lane test
+    - ci-lane code_coverage
+  artifacts:
+    when: always
+    paths:
+      - ci-lane-summary.md
+      - build/reports/ci-lane-summary.md
+
+deploy_beta_firebase:
+  stage: distribute
+  only: [develop]
+  script:
+    - ci-lane badge
+    - ci-lane build_release
+    - ci-lane sign
+    - ci-lane distribute_firebase
+    - ci-lane notify_slack
+  variables:
+    BADGE_TEXT: "QA-${CI_PIPELINE_IID}"
+    KEYSTORE_BASE64: "$PROD_KEYSTORE_B64"
+    KEYSTORE_PASSWORD: "$KEYSTORE_PASSWORD"
+    KEY_ALIAS: "$KEY_ALIAS"
+    FIREBASE_APP_ID: "$FIREBASE_APP_ID"
+    FIREBASE_TOKEN: "$FIREBASE_CLI_TOKEN"
+    SLACK_WEBHOOK_URL: "$SLACK_WEBHOOK_URL"
+
+publish_playstore_production:
+  stage: release
+  only: [tags]
+  script:
+    - ci-lane changelog
+    - ci-lane bundle
+    - ci-lane sign
+    - ci-lane security_scan
+    - ci-lane apk_size_audit
+    - ci-lane deploy_production
+    - ci-lane notify
+  variables:
+    KEYSTORE_BASE64: "$PROD_KEYSTORE_B64"
+    KEYSTORE_PASSWORD: "$KEYSTORE_PASSWORD"
+    KEY_ALIAS: "$KEY_ALIAS"
+    GOOGLE_PLAY_KEY_BASE64: "$GOOGLE_PLAY_JSON_B64"
+    PLAY_ROLLOUT_PERCENTAGE: "10"
+    APK_SIZE_BASELINE_MB: "14.5"
+    SLACK_WEBHOOK_URL: "$SLACK_WEBHOOK_URL"
+    TEAMS_WEBHOOK_URL: "$TEAMS_WEBHOOK_URL"
 ```
 
-#### B. GitHub Actions (`.github/workflows/android.yml`)
+#### B. Turnkey GitHub Actions with `ci-lane` (`.github/workflows/android.yml`)
 ```yaml
+name: Android Turnkey CI/CD
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+    tags: ['v*.*.*']
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  pr-quality:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
     container:
-      image: hateum/android-ci-box:latest
-      options: --user 1000:0
+      image: hateum/android-ci-box:slim
+    permissions:
+      contents: read
+      pull-requests: write # For sticky PR comment
     steps:
       - uses: actions/checkout@v4
-      - run: ./gradlew lintRelease testReleaseUnitTest assembleRelease --no-daemon
-```
+      - name: Run Quality Gate & Tests
+        run: |
+          ci-lane lint
+          ci-lane test
+          ci-lane code_coverage
+        env:
+          COVERAGE_THRESHOLD: "80"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  beta-distribution:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, Badge & Deploy to Firebase
+        run: |
+          ci-lane badge
+          ci-lane build_release
+          ci-lane sign
+          ci-lane apk_size_audit
+          ci-lane distribute_firebase
+          ci-lane notify_slack
+        env:
+          BADGE_TEXT: "BETA-${{ github.run_number }}"
+          KEYSTORE_BASE64: ${{ secrets.PROD_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CLI_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  store-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    container:
+      image: hateum/android-ci-box:slim
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run Full Store Release Pipeline
+        run: ci-lane release
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PROD_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          GOOGLE_PLAY_KEY_BASE64: ${{ secrets.PLAY_STORE_JSON_B64 }}
+          PLAY_TRACK: "production"
+          PLAY_ROLLOUT_PERCENTAGE: "10"
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 #### C. Jenkins (`Jenkinsfile`)
 ```groovy

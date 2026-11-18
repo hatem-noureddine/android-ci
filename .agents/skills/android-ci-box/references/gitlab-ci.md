@@ -213,3 +213,54 @@ org.gradle.parallel=true
 org.gradle.caching=true
 android.experimental.testoptions.manageddevices.maxconcurrentdevices=1
 ```
+
+---
+
+## 4. Turnkey Mobile CI/CD with `ci-lane`
+
+Starting with **v1.7.2**, you can eliminate boilerplate scripts in GitLab CI by using `ci-lane`:
+
+```yaml
+stages: [quality, build, distribute]
+
+default:
+  image: hateum/android-ci-box:slim
+  before_script:
+    - export GRADLE_USER_HOME="${CI_PROJECT_DIR}/.gradle"
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .gradle/caches/
+      - .gradle/wrapper/
+
+pr_check:
+  stage: quality
+  script:
+    - ci-lane lint
+    - ci-lane test
+    - ci-lane code_coverage
+  artifacts:
+    when: always
+    paths:
+      - ci-lane-summary.md
+      - build/reports/ci-lane-summary.md
+
+deploy_beta:
+  stage: distribute
+  only: [develop]
+  script:
+    - ci-lane badge
+    - ci-lane build_release
+    - ci-lane sign
+    - ci-lane distribute_firebase
+    - ci-lane notify_slack
+  variables:
+    BADGE_TEXT: "QA-$CI_PIPELINE_IID"
+    KEYSTORE_BASE64: "$PROD_KEYSTORE_B64"
+    KEYSTORE_PASSWORD: "$KEYSTORE_PASSWORD"
+    KEY_ALIAS: "$KEY_ALIAS"
+    FIREBASE_APP_ID: "$FIREBASE_APP_ID"
+    FIREBASE_TOKEN: "$FIREBASE_CLI_TOKEN"
+    SLACK_WEBHOOK_URL: "$SLACK_WEBHOOK_URL"
+```
+See the full catalog in [`docs/ci-lane.md`](../../../docs/ci-lane.md).
