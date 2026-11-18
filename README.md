@@ -44,7 +44,7 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 | Feature / Capability | `latest` (Full Batteries-Included) | `slim` (Ultra-Fast CI) |
 | :--- | :--- | :--- |
-| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.7.0`) | `hateum/android-ci-box:slim` (or `1.7.0-slim`) |
+| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.7.2`) | `hateum/android-ci-box:slim` (or `1.7.2-slim`) |
 | **Compressed Size** | ~3.5 GB | **~2.2 GB (~35% faster download)** |
 | **Android SDK APIs (35, 36, 37)** | ✅ Yes | ✅ Yes |
 | **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
@@ -226,12 +226,13 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
 | `ci-lane` | `/usr/local/bin/ci-lane` | `ci-lane test`, `ci-lane release`, `ci-lane all` | Turnkey universal Fastlane runner — 25+ built-in lanes, zero Fastfile setup. |
+| `ci-lane-summary` | `/usr/local/bin/ci-lane-summary` | Automatic or standalone invocation | Universal CI summary reporter for GitHub Actions, GitLab CI, Bitrise and PR sticky comments. |
 
 ---
 
 ## ⚡ Turnkey Mobile CI/CD with `ci-lane`
 
-Starting with **v1.7.0**, `hateum/android-ci-box` ships with **25+ pre-packaged universal Fastlane lanes** directly inside the image. You don't even need a `Fastfile` in your repository!
+Starting with **v1.7.2**, `hateum/android-ci-box` ships with **25+ pre-packaged universal Fastlane lanes** and an **automated cross-platform summary engine** (`$GITHUB_STEP_SUMMARY`, GitLab artifacts, and sticky PR comments). You don't even need a `Fastfile` in your repository!
 
 Run any quality, build, badging, distribution, or release step with a single command:
 ```bash

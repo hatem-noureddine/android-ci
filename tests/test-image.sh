@@ -144,6 +144,15 @@ else
     exit 1
 fi
 
+# Verify ci-lane-summary CLI usage
+echo "Verifying ci-lane-summary CLI interface..."
+if ci-lane-summary --help 2>&1 | grep -q "Universal Lane Summary Reporter"; then
+    echo -e "${GREEN}✔ ci-lane-summary CLI interface verified!${RESET}"
+else
+    echo -e "${RED}✘ ci-lane-summary CLI failed check!${RESET}"
+    exit 1
+fi
+
 # Verify Gradle CI Optimizations init-script
 echo "Verifying Gradle CI Optimizations init-script..."
 if [ -f /opt/gradle/init.d/ci-optimizations.gradle ]; then
@@ -491,6 +500,12 @@ bundle exec fastlane android test_ci
 bundle exec fastlane test
 echo "Verifying turnkey ci-lane execution on project..."
 ci-lane test
+if [ -f "build/reports/ci-lane-summary.md" ] && grep -q "<!-- ci-lane-summary -->" build/reports/ci-lane-summary.md; then
+    echo -e "${GREEN}✔ Turnkey ci-lane summary report generated successfully!${RESET}"
+else
+    echo -e "${RED}✘ Missing expected ci-lane summary report!${RESET}"
+    exit 1
+fi
 echo -e "${GREEN}✔ Fastlane and turnkey ci-lane test lanes executed successfully!${RESET}\n"
 
 echo -e "\n${BOLD}${GREEN}================================================================${RESET}"

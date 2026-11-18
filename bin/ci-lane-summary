@@ -1,0 +1,605 @@
+#!/usr/bin/env python3
+# ==============================================================================
+# hateum/android-ci-box: Universal CI/CD Summary & Diagnostic Engine
+# Generates rich Markdown reports for GitHub Actions, GitLab CI & Bitrise
+# ==============================================================================
+
+import argparse
+import glob
+import json
+import os
+import platform
+import re
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from pathlib import Path
+
+
+def get_ci_platform():
+    """Detect current CI/CD platform."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return "GitHub Actions"
+    if os.environ.get("GITLAB_CI") == "true":
+        return "GitLab CI"
+    if os.environ.get("BITRISE_IO") == "true":
+        return "Bitrise"
+    if os.environ.get("JENKINS_URL"):
+        return "Jenkins"
+    if os.environ.get("CIRCLECI") == "true":
+        return "CircleCI"
+    return "Local / Standalone"
+
+
+def get_environment_info():
+    """Collect runtime architecture, JDK, and git context."""
+    arch = platform.machine()
+    
+    # Detect Java version
+    java_ver = "Unknown JDK"
+    try:
+        res = subprocess.run(["java", "-version"], capture_output=True, text=True, check=False)
+        output = res.stderr or res.stdout
+        m = re.search(r'version "([^"]+)"', output) or re.search(r'openjdk (\d+)', output)
+        if m:
+            java_ver = f"OpenJDK {m.group(1)}"
+    except Exception:
+        pass
+
+    # Git metadata
+    branch = (
+        os.environ.get("GITHUB_REF_NAME")
+        or os.environ.get("CI_COMMIT_REF_NAME")
+        or os.environ.get("BITRISE_GIT_BRANCH")
+        or ""
+    )
+    if not branch:
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            branch = res.stdout.strip()
+        except Exception:
+            branch = "unknown"
+
+    commit = (
+        os.environ.get("GITHUB_SHA")
+        or os.environ.get("CI_COMMIT_SHA")
+        or os.environ.get("BITRISE_GIT_COMMIT")
+        or ""
+    )
+    if not commit:
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            commit = res.stdout.strip()
+        except Exception:
+            commit = "unknown"
+    else:
+        commit = commit[:8]
+
+    return {
+        "platform": get_ci_platform(),
+        "arch": arch,
+        "java": java_ver,
+        "branch": branch,
+        "commit": commit,
+    }
+
+
+def parse_junit_reports():
+    """Scan and parse JUnit XML test result files."""
+    pattern = "**/build/test-results/**/*.xml"
+    xml_files = glob.glob(pattern, recursive=True)
+    if not xml_files:
+        return None
+
+    total_tests = 0
+    total_failures = 0
+    total_errors = 0
+    total_skipped = 0
+    failed_test_names = []
+
+    for f in xml_files:
+        try:
+            tree = ET.parse(f)
+            root = tree.getroot()
+            # Handle testsuite and testsuites
+            suites = [root] if root.tag == "testsuite" else root.findall("testsuite")
+            for suite in suites:
+                total_tests += int(suite.attrib.get("tests", 0))
+                total_failures += int(suite.attrib.get("failures", 0))
+                total_errors += int(suite.attrib.get("errors", 0))
+                total_skipped += int(suite.attrib.get("skipped", 0))
+
+                for tc in suite.findall("testcase"):
+                    classname = tc.attrib.get("classname", "")
+                    name = tc.attrib.get("name", "")
+                    if tc.find("failure") is not None or tc.find("error") is not None:
+                        failed_test_names.append(f"`{classname}#{name}`")
+        except Exception:
+            continue
+
+    if total_tests == 0 and not xml_files:
+        return None
+
+    passed = max(0, total_tests - (total_failures + total_errors + total_skipped))
+    return {
+        "total": total_tests,
+        "passed": passed,
+        "failures": total_failures + total_errors,
+        "skipped": total_skipped,
+        "failed_names": failed_test_names[:5],
+    }
+
+
+def parse_lint_reports():
+    """Scan and parse Android Lint XML report files."""
+    xml_files = glob.glob("**/build/reports/lint-results*.xml", recursive=True)
+    if not xml_files:
+        return None
+
+    total_errors = 0
+    total_warnings = 0
+
+    for f in xml_files:
+        try:
+            tree = ET.parse(f)
+            root = tree.getroot()
+            for issue in root.findall("issue"):
+                severity = issue.attrib.get("severity", "").lower()
+                if severity in ("error", "fatal"):
+                    total_errors += 1
+                elif severity == "warning":
+                    total_warnings += 1
+        except Exception:
+            continue
+
+    return {"errors": total_errors, "warnings": total_warnings}
+
+
+def parse_jacoco_reports():
+    """Scan and parse Jacoco XML coverage reports."""
+    xml_files = glob.glob("**/build/reports/jacoco/**/*.xml", recursive=True)
+    if not xml_files:
+        return None
+
+    total_missed = 0
+    total_covered = 0
+
+    for f in xml_files:
+        try:
+            tree = ET.parse(f)
+            root = tree.getroot()
+            for counter in root.findall(".//counter"):
+                if counter.attrib.get("type") == "LINE":
+                    total_missed += int(counter.attrib.get("missed", 0))
+                    total_covered += int(counter.attrib.get("covered", 0))
+        except Exception:
+            continue
+
+    total = total_missed + total_covered
+    if total == 0:
+        return None
+
+    pct = round((total_covered / total) * 100, 1)
+    return {"percentage": pct, "lines_covered": total_covered, "total_lines": total}
+
+
+def scan_artifacts():
+    """Locate compiled APKs and AABs and report sizes."""
+    artifacts = []
+    patterns = ["**/build/outputs/apk/**/*.apk", "**/build/outputs/bundle/**/*.aab"]
+    for p in patterns:
+        for f in glob.glob(p, recursive=True):
+            if os.path.isfile(f):
+                size_mb = round(os.path.getsize(f) / (1024 * 1024), 2)
+                artifacts.append({"name": os.path.basename(f), "path": f, "size_mb": size_mb})
+    return artifacts
+
+
+def extract_failure_diagnostics(log_file):
+    """Extract failing Gradle task and relevant stacktrace snippet from log."""
+    if not log_file or not os.path.isfile(log_file):
+        return None
+
+    failing_task = None
+    stacktrace_lines = []
+
+    try:
+        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+
+        for line in lines:
+            m = re.search(r"> Task (:\S+) FAILED", line)
+            if m:
+                failing_task = m.group(1)
+
+        # Capture last 25 lines of meaningful output
+        filtered = [l.rstrip() for l in lines if l.strip()]
+        stacktrace_lines = filtered[-25:] if len(filtered) > 25 else filtered
+    except Exception:
+        pass
+
+    return {
+        "failing_task": failing_task or "Unknown Task / Fastlane Action",
+        "snippet": "\n".join(stacktrace_lines),
+    }
+
+
+def format_duration(seconds):
+    """Format seconds into human-readable duration."""
+    sec = int(seconds)
+    if sec < 60:
+        return f"{sec}s"
+    mins = sec // 60
+    rem = sec % 60
+    return f"{mins}m {rem}s"
+
+
+def load_or_init_summary(summary_file, env_info):
+    """Load existing summary markdown or initialize header."""
+    marker = "<!-- ci-lane-summary -->"
+    if os.path.isfile(summary_file):
+        try:
+            with open(summary_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            if marker in content:
+                return content
+        except Exception:
+            pass
+
+    date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+    header = f"""{marker}
+# 📱 Android CI/CD Pipeline Summary (`hateum/android-ci-box`)
+
+> **Platform**: {env_info['platform']} | **Host**: `{env_info['arch']}` | **Runtime**: `{env_info['java']}` | **Branch**: `{env_info['branch']}` (`{env_info['commit']}`) | **Timestamp**: {date_str}
+
+### 📊 Execution Matrix
+| Lane | Status | Duration | Details & Metrics | Artifacts |
+| :--- | :---: | :---: | :--- | :--- |
+"""
+    return header
+
+
+def append_lane_row(summary_content, lane, status, duration_str, details_str, artifacts_str):
+    """Append or insert row into Execution Matrix table."""
+    status_icon = "✅ Passed" if status == "success" else "❌ Failed"
+    row = f"| `{lane}` | {status_icon} | {duration_str} | {details_str} | {artifacts_str} |\n"
+
+    # Insert row before any Failure Diagnostics block or at end of table
+    diag_marker = "### 🚨 Failure Diagnostics"
+    if diag_marker in summary_content:
+        parts = summary_content.split(diag_marker, 1)
+        new_content = parts[0] + row + "\n" + diag_marker + parts[1]
+        return new_content
+    else:
+        return summary_content + row
+
+
+def append_failure_diagnostic(summary_content, lane, exit_code, diagnostics):
+    """Append failure diagnostic details at the bottom of the summary."""
+    diag_marker = "### 🚨 Failure Diagnostics"
+    if diag_marker not in summary_content:
+        summary_content += f"\n{diag_marker}\n"
+
+    task_name = diagnostics.get("failing_task") if diagnostics else "Unknown"
+    snippet = diagnostics.get("snippet") if diagnostics else "No detailed log snippet available."
+
+    callout = f"""
+<details>
+<summary><b>❌ Lane <code>{lane}</code> failed (Exit code: {exit_code}) — {task_name}</b></summary>
+
+```text
+{snippet}
+```
+</details>
+"""
+    return summary_content + callout
+
+
+def post_github_comment(summary_content):
+    """Upsert sticky comment on GitHub Pull Request using gh CLI or GITHUB_TOKEN."""
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if not token and not os.path.isfile(os.path.expanduser("~/.config/gh/hosts.yml")):
+        return
+
+    # Check PR number from GITHUB_EVENT_PATH if available
+    pr_number = None
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and os.path.isfile(event_path):
+        try:
+            with open(event_path, "r", encoding="utf-8") as f:
+                event = json.load(f)
+            pr_number = event.get("pull_request", {}).get("number") or event.get("issue", {}).get("number")
+        except Exception:
+            pass
+
+    if not pr_number:
+        # Fallback to gh CLI
+        try:
+            res = subprocess.run(
+                ["gh", "pr", "view", "--json", "number"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if res.returncode == 0:
+                pr_number = json.loads(res.stdout).get("number")
+        except Exception:
+            pass
+
+    if not pr_number:
+        return
+
+    # Look for existing comment with marker <!-- ci-lane-summary -->
+    marker = "<!-- ci-lane-summary -->"
+    try:
+        res = subprocess.run(
+            ["gh", "api", f"repos/:owner/:repo/issues/{pr_number}/comments"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if res.returncode == 0:
+            comments = json.loads(res.stdout)
+            for c in comments:
+                if marker in c.get("body", ""):
+                    comment_id = c.get("id")
+                    # Update comment (PUT)
+                    subprocess.run(
+                        [
+                            "gh",
+                            "api",
+                            "-X",
+                            "PATCH",
+                            f"repos/:owner/:repo/issues/comments/{comment_id}",
+                            "-f",
+                            f"body={summary_content}",
+                        ],
+                        capture_output=True,
+                        check=False,
+                    )
+                    return
+
+            # No existing comment -> Create new (POST)
+            subprocess.run(
+                [
+                    "gh",
+                    "api",
+                    "-X",
+                    "POST",
+                    f"repos/:owner/:repo/issues/{pr_number}/comments",
+                    "-f",
+                    f"body={summary_content}",
+                ],
+                capture_output=True,
+                check=False,
+            )
+    except Exception:
+        pass
+
+
+def post_gitlab_note(summary_content):
+    """Upsert sticky note on GitLab Merge Request."""
+    token = os.environ.get("GITLAB_TOKEN") or os.environ.get("CI_JOB_TOKEN")
+    project_id = os.environ.get("CI_PROJECT_ID")
+    mr_iid = os.environ.get("CI_MERGE_REQUEST_IID")
+    api_url = os.environ.get("CI_API_V4_URL", "https://gitlab.com/api/v4")
+
+    if not token or not project_id or not mr_iid:
+        return
+
+    headers = {"JOB-TOKEN": token} if token == os.environ.get("CI_JOB_TOKEN") else {"PRIVATE-TOKEN": token}
+    headers["Content-Type"] = "application/json"
+
+    marker = "<!-- ci-lane-summary -->"
+    notes_url = f"{api_url}/projects/{project_id}/merge_requests/{mr_iid}/notes"
+
+    try:
+        # Search existing notes
+        req = urllib.request.Request(notes_url, headers=headers)
+        with urllib.request.urlopen(req) as resp:
+            notes = json.loads(resp.read().decode("utf-8"))
+
+        for n in notes:
+            if marker in n.get("body", ""):
+                note_id = n.get("id")
+                update_url = f"{notes_url}/{note_id}"
+                data = json.dumps({"body": summary_content}).encode("utf-8")
+                put_req = urllib.request.Request(update_url, data=data, headers=headers, method="PUT")
+                with urllib.request.urlopen(put_req):
+                    pass
+                return
+
+        # Create new note
+        data = json.dumps({"body": summary_content}).encode("utf-8")
+        post_req = urllib.request.Request(notes_url, data=data, headers=headers, method="POST")
+        with urllib.request.urlopen(post_req):
+            pass
+    except Exception:
+        pass
+
+
+def print_console_box(lane, status, duration_str, details_str, artifacts_str, exit_code, diagnostics):
+    """Print high-visibility ANSI colored summary box to terminal."""
+    is_tty = sys.stdout.isatty()
+    green = "\033[32m" if is_tty else ""
+    red = "\033[31m" if is_tty else ""
+    bold = "\033[1m" if is_tty else ""
+    cyan = "\033[36m" if is_tty else ""
+    reset = "\033[0m" if is_tty else ""
+
+    status_badge = f"{green}✔ SUCCESS{reset}" if status == "success" else f"{red}✖ FAILURE (Exit {exit_code}){reset}"
+
+    print(f"\n{bold}{cyan}┌────────────────────────────────────────────────────────────────────────┐{reset}")
+    print(f"{bold}{cyan}│  hateum/android-ci-box: Turnkey ci-lane Execution Summary              │{reset}")
+    print(f"{bold}{cyan}├────────────────────────────────────────────────────────────────────────┤{reset}")
+    print(f"│  • Lane:      {bold}{lane:<56}{reset} │")
+    print(f"│  • Status:    {status_badge:<65} │")
+    print(f"│  • Duration:  {duration_str:<56} │")
+    if details_str and details_str != "-":
+        print(f"│  • Metrics:   {details_str:<56} │")
+    if artifacts_str and artifacts_str != "-":
+        print(f"│  • Outputs:   {artifacts_str:<56} │")
+
+    if status != "success" and diagnostics:
+        task = diagnostics.get("failing_task", "Unknown Task")
+        print(f"{bold}{cyan}├────────────────────────────────────────────────────────────────────────┤{reset}")
+        print(f"│  {red}Failed at: {task:<58}{reset} │")
+
+    print(f"{bold}{cyan}└────────────────────────────────────────────────────────────────────────┘{reset}\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Android CI Box: Universal Lane Summary Reporter")
+    parser.add_argument("--lane", required=True, help="Name of the executed lane")
+    parser.add_argument("--status", required=True, choices=["success", "failure"], help="Status")
+    parser.add_argument("--duration", type=float, default=0.0, help="Elapsed duration in seconds")
+    parser.add_argument("--exit-code", type=int, default=0, help="Process exit code")
+    parser.add_argument("--log-file", help="Path to execution log file")
+    args = parser.parse_args()
+
+    # Opt-out check
+    if os.environ.get("CI_LANE_SUMMARY", "true").lower() == "false":
+        sys.exit(0)
+
+    env_info = get_environment_info()
+    duration_str = format_duration(args.duration)
+
+    # 1. Parse Domain Metrics
+    details_parts = []
+
+    # JUnit
+    junit = parse_junit_reports()
+    if junit:
+        details_parts.append(f"🧪 Tests: **{junit['passed']}/{junit['total']}** passed")
+        if junit["failures"] > 0:
+            details_parts.append(f"({junit['failures']} failed: {', '.join(junit['failed_names'])})")
+
+    # Lint
+    lint = parse_lint_reports()
+    if lint:
+        details_parts.append(f"🔍 Lint: {lint['errors']} err, {lint['warnings']} warn")
+
+    # Jacoco
+    cov = parse_jacoco_reports()
+    if cov:
+        details_parts.append(f"📊 Coverage: {cov['percentage']}%")
+
+    details_str = " • ".join(details_parts) if details_parts else "-"
+
+    # 2. Artifacts
+    artifacts = scan_artifacts()
+    if artifacts:
+        artifacts_str = ", ".join([f"`{a['name']}` ({a['size_mb']} MB)" for a in artifacts[:3]])
+    else:
+        artifacts_str = "-"
+
+    # 3. Failure Diagnostics
+    diagnostics = None
+    if args.status == "failure":
+        diagnostics = extract_failure_diagnostics(args.log_file)
+
+    # 4. Local Summary Files
+    os.makedirs("build/reports", exist_ok=True)
+    summary_file = "build/reports/ci-lane-summary.md"
+
+    current_summary = load_or_init_summary(summary_file, env_info)
+    updated_summary = append_lane_row(
+        current_summary,
+        args.lane,
+        args.status,
+        duration_str,
+        details_str,
+        artifacts_str,
+    )
+
+    if args.status == "failure":
+        updated_summary = append_failure_diagnostic(
+            updated_summary, args.lane, args.exit_code, diagnostics
+        )
+
+    # Write report files
+    with open(summary_file, "w", encoding="utf-8") as f:
+        f.write(updated_summary)
+
+    # Also sync to root ci-lane-summary.md for GitLab CI artifacts
+    try:
+        with open("ci-lane-summary.md", "w", encoding="utf-8") as f:
+            f.write(updated_summary)
+    except Exception:
+        pass
+
+    # Save JSON metrics
+    json_metrics = {
+        "lane": args.lane,
+        "status": args.status,
+        "duration_seconds": args.duration,
+        "exit_code": args.exit_code,
+        "junit": junit,
+        "lint": lint,
+        "coverage": cov,
+        "artifacts": artifacts,
+        "timestamp": datetime.now().isoformat(),
+    }
+    try:
+        with open("build/reports/ci-lane-summary.json", "w", encoding="utf-8") as f:
+            json.dump(json_metrics, f, indent=2)
+    except Exception:
+        pass
+
+    # 5. Dispatch to GitHub Actions Step Summary
+    step_summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if step_summary_file and os.path.exists(os.path.dirname(step_summary_file)):
+        try:
+            with open(step_summary_file, "a", encoding="utf-8") as f:
+                # Append row and potential failure callout
+                status_icon = "✅ Passed" if args.status == "success" else "❌ Failed"
+                f.write(
+                    f"\n### ⚡ `ci-lane {args.lane}` ({status_icon} in {duration_str})\n"
+                )
+                if details_str != "-":
+                    f.write(f"- **Metrics**: {details_str}\n")
+                if artifacts_str != "-":
+                    f.write(f"- **Artifacts**: {artifacts_str}\n")
+                if args.status == "failure" and diagnostics:
+                    f.write(
+                        f"\n<details><summary>🚨 <b>Error Snippet ({diagnostics['failing_task']})</b></summary>\n\n```text\n{diagnostics['snippet']}\n```\n</details>\n"
+                    )
+        except Exception:
+            pass
+
+    # 6. Sticky PR / MR Comment (if enabled)
+    if os.environ.get("CI_LANE_COMMENT_PR", "true").lower() != "false":
+        if env_info["platform"] == "GitHub Actions":
+            post_github_comment(updated_summary)
+        elif env_info["platform"] == "GitLab CI":
+            post_gitlab_note(updated_summary)
+
+    # 7. Print Console Box
+    print_console_box(
+        args.lane,
+        args.status,
+        duration_str,
+        details_str,
+        artifacts_str,
+        args.exit_code,
+        diagnostics,
+    )
+
+
+if __name__ == "__main__":
+    main()
