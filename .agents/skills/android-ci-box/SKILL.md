@@ -1,7 +1,7 @@
 ---
 name: android-ci-box
 description: Autonomous operations, diagnostics, builds, lints, and test execution workflows inside the hateum/android-ci-box Android CI/CD container.
-version: 1.7.0
+version: 1.7.1
 triggers:
   - "build android"
   - "run android tests"
@@ -33,8 +33,8 @@ This skill guides AI agents (Antigravity, Claude Code, GitHub Copilot Workspace,
 ## 1. Container Specifications & Runtime Context
 
 - **Docker Images**:
-  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.0`): Full batteries-included image with Android Emulator & GMD.
-  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.0-slim`): Ultra-fast compilation and linting image (~35% smaller).
+  - `hateum/android-ci-box:latest` (or SemVer tag `1.7.1`): Full batteries-included image with Android Emulator & GMD.
+  - `hateum/android-ci-box:slim` (or SemVer tag `1.7.1-slim`): Ultra-fast compilation and linting image (~35% smaller).
 - **Default Workdir**: `/project`
 - **Default User**: `runner` (UID 1000, GID 0), fully hardened for rootless and arbitrary UID execution (`--user 1000:0`)
 - **Default Java**: OpenJDK 21 (`/opt/jdk-21`), with OpenJDK 17 (`/opt/jdk-17`) available
@@ -251,15 +251,31 @@ ci-lane sign               # Decodes base64 keystore and sets signing properties
 # Stores & App Distribution:
 ci-lane distribute_firebase  # Deploys to Firebase App Distribution
 ci-lane distribute_playstore # Uploads AAB to Google Play Store (track: internal/alpha/beta/production)
+ci-lane deploy_alpha         # Google Play internal track shortcut
+ci-lane deploy_production    # Google Play production shortcut (default: 10% rollout, set PLAY_ROLLOUT_PERCENTAGE)
 ci-lane distribute_github    # Attaches release APKs/AABs to GitHub Release
+ci-lane app_center           # Distributes to Microsoft App Center (APPCENTER_API_TOKEN, APPCENTER_OWNER_NAME, APPCENTER_APP_NAME)
+ci-lane deploy_huawei        # Publishes to Huawei AppGallery Connect (HUAWEI_CLIENT_ID, HUAWEI_CLIENT_SECRET, HUAWEI_APP_ID)
+ci-lane deploy_samsung       # Publishes to Samsung Galaxy Store (SAMSUNG_SERVICE_ACCOUNT, SAMSUNG_ACCESS_KEY, SAMSUNG_CONTENT_ID)
+
+# Version Control:
+ci-lane changelog            # Generates CHANGELOG.md from Conventional Commits Git history
+ci-lane git_tag              # Creates and pushes Git tag vX.Y.Z from app versionName
+
+# Quality Metrics & Security:
+ci-lane code_coverage        # Runs Jacoco and enforces minimum coverage threshold (COVERAGE_THRESHOLD, default: 80)
+ci-lane security_scan        # Analyzes APK permissions and certificate expiry via apkanalyzer
+ci-lane perf_baseline        # Runs Jetpack Macrobenchmark and writes metrics JSON (BENCHMARK_MODULE, BENCHMARK_OUTPUT)
+ci-lane apk_size_audit       # Warns on APK/AAB size regressions vs baseline (APK_SIZE_BASELINE_MB, APK_SIZE_WARN_THRESHOLD_PCT)
 
 # Multi-channel ChatOps:
 ci-lane notify_slack         # Posts deployment status card to Slack (SLACK_WEBHOOK_URL)
 ci-lane notify_teams         # Posts deployment status card to MS Teams (TEAMS_WEBHOOK_URL)
 ci-lane notify               # Multi-channel broadcast to all configured webhooks
 
-# Complete End-to-End Pipeline:
-ci-lane all                  # Clean -> Lint -> Test -> Badge -> Build -> Distribute -> Notify
+# Complete End-to-End Pipelines:
+ci-lane all                  # Lint -> Detekt -> Test -> Build Release -> Bundle
+ci-lane release              # sign + bundle + distribute (Play Store + Firebase) + git_tag + changelog + notify
 ```
 
 *Note: If the current workspace contains its own `fastlane/Fastfile` or `Fastfile`, `ci-lane` automatically delegates to your custom Fastfile instead.*

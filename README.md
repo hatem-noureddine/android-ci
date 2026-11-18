@@ -225,21 +225,42 @@ Explicit variables take **absolute precedence** over project auto-detection:
 | `install-ndk-version` | `/usr/local/bin/install-ndk-version` | `install-ndk-version 27.2.12479018 [cmake]` | Dynamically installs Android NDK and CMake with rootless permissions. |
 | `bundletool` | `/usr/local/bin/bundletool` | `bundletool build-apks --bundle=app.aab` | Google Bundletool 1.18.3 CLI for universal APKs and testing. |
 | `android` | `${ANDROID_HOME}/cmdline-tools/latest/bin/android` | `android sdk list`, `android --version` | Official Google Android CLI. |
-| `ci-lane` | `/usr/local/bin/ci-lane` | `ci-lane test`, `ci-lane badge`, `ci-lane all` | Turnkey universal Fastlane runner with zero Fastfile setup. |
+| `ci-lane` | `/usr/local/bin/ci-lane` | `ci-lane test`, `ci-lane release`, `ci-lane all` | Turnkey universal Fastlane runner — 25+ built-in lanes, zero Fastfile setup. |
 
 ---
 
 ## ⚡ Turnkey Mobile CI/CD with `ci-lane`
 
-Starting with **v1.7.0**, `hateum/android-ci-box` ships with **pre-packaged universal Fastlane lanes** directly inside the image. You don't even need a `Fastfile` in your repository!
+Starting with **v1.7.0**, `hateum/android-ci-box` ships with **25+ pre-packaged universal Fastlane lanes** directly inside the image. You don't even need a `Fastfile` in your repository!
 
-Run any quality, build, badging, or distribution step with a single command:
+Run any quality, build, badging, distribution, or release step with a single command:
 ```bash
+# Quality & Testing
 ci-lane test                # Runs unit tests with JUnit/XML report extraction
 ci-lane lint                # Executes Android Lint with HTML reports
+ci-lane code_coverage       # Jacoco coverage with configurable minimum threshold
+ci-lane security_scan       # Analyzes APK permissions & certificate expiry
+ci-lane perf_baseline       # Runs Jetpack Macrobenchmark and writes metrics JSON
+
+# Build & Branding
 ci-lane badge               # Overlays QA/Build badges onto launcher icons (BADGE_TEXT="BETA")
-ci-lane distribute_firebase # Deploys release AAB/APK to Firebase App Distribution
-ci-lane all                 # Full pipeline: clean -> lint -> test -> badge -> build -> distribute
+ci-lane apk_size_audit      # Warns on APK/AAB size regressions vs baseline
+
+# Distribution
+ci-lane distribute_firebase # Deploys release APK/AAB to Firebase App Distribution
+ci-lane deploy_alpha        # Publishes AAB to Google Play internal track
+ci-lane deploy_production   # Publishes AAB to Google Play production (10% rollout)
+ci-lane app_center          # Distributes to Microsoft App Center
+ci-lane deploy_huawei       # Publishes to Huawei AppGallery Connect
+ci-lane deploy_samsung      # Publishes to Samsung Galaxy Store
+
+# Release Management
+ci-lane changelog           # Generates CHANGELOG.md from Conventional Commits
+ci-lane git_tag             # Creates & pushes Git tag vX.Y.Z from app versionName
+
+# Composite Pipelines
+ci-lane all                 # Full CI: lint -> detekt -> test -> build_release -> bundle
+ci-lane release             # Full release: sign + bundle + stores + git_tag + changelog + notify
 ```
 
 ### 1-Line CI Integration Examples
