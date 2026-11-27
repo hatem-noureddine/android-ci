@@ -44,7 +44,7 @@ runs:
   steps:
     - name: "Restore Gradle CI Build Cache"
       if: inputs.gradle-cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           ~/.gradle/caches
