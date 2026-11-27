@@ -17,7 +17,7 @@ graph TD
     classDef entrypoint fill:#512e5f,stroke:#8e44ad,stroke-width:2px,color:#fff;
     classDef agent fill:#7d6608,stroke:#f1c40f,stroke-width:2px,color:#fff;
 
-    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 24.04 LTS (Noble Numbat)<br/>Native Multi-Arch (amd64 / arm64)"]:::os
+    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 26.04 LTS (Resolute Raccoon)<br/>Native Multi-Arch (amd64 / arm64)"]:::os
 
     T1 --> T2_Java["<b>Tier 2: Java Runtimes</b><br/>OpenJDK 21 (Default) & OpenJDK 17<br/>switch-jdk dynamic selector"]:::runtime
     T1 --> T2_Ruby["<b>Tier 2: Ruby & Deploy Tooling</b><br/>Precompiled Ruby 4.0.9 (rbenv)<br/>Bundler 4.0.23 + Fastlane 2.241.2"]:::runtime

@@ -29,3 +29,4 @@ This directory documents the key architectural choices made during the evolution
 | [ADR-0023](0023-universal-dependency-watchdog-and-dependabot-architecture.md) | Universal Dependency Watchdog, GitHub Actions Audit and Automated Pull Request Architecture | Accepted | 2026-11-15 |
 | [ADR-0024](0024-turnkey-built-in-fastlane-lanes-and-commercial-monetization.md) | Turnkey Built-In Fastlane Lanes (`ci-lane`) and Commercial B2B Monetization Architecture | Accepted | 2026-11-18 |
 | [ADR-0025](0025-universal-ci-summary-and-sticky-comment-engine.md) | Universal CI/CD Summary & Sticky Comment Reporting Engine | Accepted | 2026-11-18 |
+| [ADR-0026](0026-upgrade-to-ubuntu-26-04-lts-resolute-raccoon.md) | Upgrade to Ubuntu 26.04 LTS (Resolute Raccoon) Base Image | Accepted | 2026-11-27 |
