@@ -56,7 +56,7 @@ Choose the variant that best balances download speed and emulator capabilities:
 
 ```
 +-----------------------------------------------------------------------------------------+
-|                        Tier 1: Base Operating System (Ubuntu 24.04 LTS)                 |
+|                        Tier 1: Base Operating System (Ubuntu 26.04 LTS)                 |
 |             Native Multi-Arch Matrix: linux/amd64 (x86_64) | linux/arm64 (aarch64)      |
 +-----------------------------------------------------------------------------------------+
        |                                   |                                   |

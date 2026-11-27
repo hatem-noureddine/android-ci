@@ -111,7 +111,7 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="font-extrabold text-lg tracking-tight text-white group-hover:text-sky-400 transition-colors">Android CI Box</span>
-          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.7.3</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-mono font-medium bg-sky-950 text-sky-400 border border-sky-800">v1.8.0</span>
         </div>
       </a>
 
@@ -408,7 +408,7 @@ graph TD
     classDef net fill:#3b0764,stroke:#a855f7,stroke-width:2px,color:#fff;
     classDef agent fill:#713f12,stroke:#eab308,stroke-width:2px,color:#fff;
 
-    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 24.04 LTS (Noble) · Multi-Arch amd64/arm64"]:::os
+    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 26.04 LTS (Resolute) · Multi-Arch amd64/arm64"]:::os
     T1 --> T2_Java["<b>Tier 2: Java Runtimes</b><br/>OpenJDK 21 & 17 · switch-jdk"]:::runtime
     T1 --> T2_Ruby["<b>Tier 2: Ruby & Fastlane</b><br/>Ruby 4.0.9 (rbenv) · Fastlane 2.241.2"]:::runtime
     T1 --> T2_Sys["<b>Tier 2: System Utilities</b><br/>Python 3.12 · GitHub CLI · curl · git-lfs"]:::runtime
@@ -799,8 +799,8 @@ flowchart LR
             </div>
             <div class="p-5 bg-slate-950/90 text-slate-300 space-y-2 overflow-x-auto leading-relaxed">
               <p><span class="text-sky-400">runner@android-ci-box</span>:<span class="text-indigo-400">~</span>$ ci-doctor</p>
-              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.6.4) ===</p>
-              <p><span class="text-emerald-400">[OK]</span> Operating System: Ubuntu 24.04 LTS (Noble) - Arch: aarch64 (Native arm64)</p>
+              <p class="text-sky-400 font-bold">=== hateum/android-ci-box Health Diagnostics (v1.8.0) ===</p>
+              <p><span class="text-emerald-400">[OK]</span> Operating System: Ubuntu 26.04 LTS (Resolute) - Arch: aarch64 (Native arm64)</p>
               <p><span class="text-emerald-400">[OK]</span> Current User: runner (UID: 1000, GID: 0, Rootless: OK)</p>
               <p><span class="text-emerald-400">[OK]</span> Default Java: OpenJDK 21.0.13 (/opt/jdk-21)</p>
               <p><span class="text-emerald-400">[OK]</span> Secondary Java: OpenJDK 17.0.21 (/opt/jdk-17 ready for switch-jdk)</p>

@@ -7,7 +7,7 @@
 #           ci-doctor CLI, Hardened Root & Non-Root Support
 # ==============================================================================
 
-FROM ubuntu:24.04 AS slim
+FROM ubuntu:26.04 AS slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -83,8 +83,9 @@ RUN apt-get update -qq && \
         zlib1g-dev && \
     ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "arm64" ]; then \
+        UBUNTU_CODENAME=$(grep -oP 'VERSION_CODENAME=\K\w+' /etc/os-release || echo "resolute") && \
         sed -i 's/^Types: deb$/Types: deb\nArchitectures: arm64/' /etc/apt/sources.list.d/ubuntu.sources && \
-        printf "Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: noble noble-updates noble-backports\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: noble-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n" > /etc/apt/sources.list.d/amd64.sources && \
+        printf "Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: %s %s-updates %s-backports\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: %s-security\nComponents: main universe restricted multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\nArchitectures: amd64\n" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" "$UBUNTU_CODENAME" > /etc/apt/sources.list.d/amd64.sources && \
         dpkg --add-architecture amd64 && \
         apt-get update -qq && \
         apt-get install -qq -y --no-install-recommends libc6:amd64 libstdc++6:amd64 zlib1g:amd64; \

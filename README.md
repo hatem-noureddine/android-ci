@@ -44,7 +44,7 @@ Features a **dual-mode network engine** (public internet & enterprise intranet w
 
 | Feature / Capability | `latest` (Full Batteries-Included) | `slim` (Ultra-Fast CI) |
 | :--- | :--- | :--- |
-| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.7.3`) | `hateum/android-ci-box:slim` (or `1.7.3-slim`) |
+| **Docker Tag** | `hateum/android-ci-box:latest` (or `1.8.0`) | `hateum/android-ci-box:slim` (or `1.8.0-slim`) |
 | **Compressed Size** | ~3.5 GB | **~2.2 GB (~35% faster download)** |
 | **Android SDK APIs (35, 36, 37)** | ✅ Yes | ✅ Yes |
 | **Build-Tools (35, 36, 37)** | ✅ Yes | ✅ Yes |
@@ -69,7 +69,7 @@ graph TD
     classDef entrypoint fill:#512e5f,stroke:#8e44ad,stroke-width:2px,color:#fff;
     classDef agent fill:#7d6608,stroke:#f1c40f,stroke-width:2px,color:#fff;
 
-    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 24.04 LTS (Noble Numbat)<br/>Native Multi-Arch (amd64 / arm64)"]:::os
+    T1["<b>Tier 1: Base Operating System</b><br/>Ubuntu 26.04 LTS (Resolute Raccoon)<br/>Native Multi-Arch (amd64 / arm64)"]:::os
 
     T1 --> T2_Java["<b>Tier 2: Java Runtimes</b><br/>OpenJDK 21 (Default) & OpenJDK 17<br/>switch-jdk dynamic selector"]:::runtime
     T1 --> T2_Ruby["<b>Tier 2: Ruby & Deploy Tooling</b><br/>Precompiled Ruby 4.0.9 (rbenv)<br/>Bundler 4.0.23 + Fastlane 2.241.2"]:::runtime
